@@ -1,0 +1,21 @@
+{
+  "name": "EnsariPOS Kiosk",
+  "port": 8790,
+  "cloudServerUrl": "https://app.ornek-alanadi.com",
+  "kioskActivationKey": "",
+  "adminPin": "1234",
+  "exitPin": "",
+  "sambaHost": "localhost",
+  "sambaPort": "9000",
+  "sambaClientId": "EnsariGarson",
+  "sambaUser": "",
+  "sambaPass": "",
+  "menuName": "Menu",
+  "department": "Gel-Al",
+  "ticketType": "Adisyon",
+  "terminal": "Kiosk",
+  "payMode": "counter",
+  "fiscalType": "",
+  "fiscalPort": "",
+  "logo": ""
+}

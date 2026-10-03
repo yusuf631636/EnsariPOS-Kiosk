@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>EnsariPOS Kiosk — Kurulum</title>
+<style>
+:root{--bg:#0f1420;--card:#182033;--card2:#1e2840;--tx:#eef2fb;--mut:#8d99b5;--line:#26314b;--brand:#ff7a30;--grn:#2fae66;--red:#ff5d6c;--gold:#f5b942}
+*{box-sizing:border-box;margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+body{background:var(--bg);color:var(--tx);line-height:1.5}
+.top{background:linear-gradient(135deg,#e8622c,#ff8a4c);color:#fff;padding:30px 20px;text-align:center}
+.top .logo{width:70px;height:70px;border-radius:18px;background:#ffffff22;display:grid;place-items:center;font-size:38px;margin:0 auto 10px}
+.top h1{font-size:26px}.top p{opacity:.95;margin-top:6px}
+.wrap{max-width:720px;margin:0 auto;padding:18px}
+.status{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}
+.sbox{flex:1;min-width:150px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.sbox .t{font-size:12px;color:var(--mut)}.sbox .v{font-weight:800;font-size:15px;margin-top:3px}
+.ok{color:var(--grn)}.bad{color:var(--red)}.wait{color:var(--gold)}
+.step{display:flex;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:12px}
+.step .n{width:34px;height:34px;flex:none;border-radius:50%;background:var(--brand);color:#fff;display:grid;place-items:center;font-weight:800}
+.step h3{font-size:16px;margin-bottom:4px}.step p{color:var(--mut);font-size:14px}
+.step b{color:var(--tx)}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 30px}
+.btn{flex:1;min-width:200px;text-align:center;text-decoration:none;border:0;border-radius:14px;padding:16px;font-weight:800;font-size:16px;cursor:pointer}
+.btn.p{background:var(--brand);color:#fff}.btn.s{background:var(--card2);color:var(--tx);border:1px solid var(--line)}
+.note{background:#1a275a;border:1px solid var(--line);border-radius:12px;padding:14px;color:#c9d0e6;font-size:13.5px;margin-top:10px}
+.refresh{color:var(--mut);font-size:12px;text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="logo">🖥️</div>
+  <h1>EnsariPOS Kiosk — Kurulum</h1>
+  <p>Birkaç adımda hazır. Durumu aşağıdan takip edin.</p>
+</div>
+<div class="wrap">
+  <div class="status">
+    <div class="sbox"><div class="t">1 · Lisans</div><div class="v wait" id="stLic">kontrol…</div></div>
+    <div class="sbox"><div class="t">2 · SambaPOS bağlantısı</div><div class="v wait" id="stConn">kontrol…</div></div>
+    <div class="sbox"><div class="t">3 · Menü / ürünler</div><div class="v wait" id="stMenu">kontrol…</div></div>
+  </div>
+
+  <div class="btns">
+    <a class="btn p" href="/admin" target="_blank">⚙️ Yönetici Paneli (ayarlar)</a>
+    <a class="btn s" href="/" id="openKiosk">🖥️ Kiosku Başlat</a>
+  </div>
+
+  <div class="step"><div class="n">1</div><div><h3>Yönetici paneline girin</h3><p>Yukarıdaki <b>⚙️ Yönetici Paneli</b>'ne tıklayın. İlk PIN: <b>1234</b> — girdikten sonra ilk işiniz bu PIN'i değiştirmek olsun (Güvenlik bölümü).</p></div></div>
+  <div class="step"><div class="n">2</div><div><h3>Kiosk lisans anahtarını girin</h3><p>Panelde <b>Lisans</b> bölümüne, yönetici/bayi panelinden aldığınız <b>ayrı kiosk lisans anahtarını</b> yazın. (Restoranın ana lisansı değildir.)</p></div></div>
+  <div class="step"><div class="n">3</div><div><h3>SambaPOS bağlantısı</h3><p><b>SambaPOS Bağlantısı</b> bölümüne bir <b>yönetici (Admin)</b> SambaPOS kullanıcı adı ve <b>Şifresini</b> (PIN değil) girin. <b>Bağlantıyı test et</b>'e basın. Not: restoran bilgisayarında hazırlık aracı bir kez çalıştırılmalı (uygulama kaydı + 9000 portu — Garson ile ortak).</p></div></div>
+  <div class="step"><div class="n">4</div><div><h3>Menüyü seçin</h3><p><b>Menü</b> alanına SambaPOS'taki menü adını yazıp <b>Menüyü önizle</b>'ye basın; kaç ürün geldiğini görün. Kioskta görünecek ürünler bu menüden gelir.</p></div></div>
+  <div class="step"><div class="n">5</div><div><h3>Gel-al ve yazıcı</h3><p><b>Departman / Adisyon tipi / Terminal</b>'i girin (siparişler buraya <b>gel-al</b> düşer). İsterseniz <b>Yazıcı / Fiş</b> bölümüne yazdırma komutunu yazın (ör. "Fiş Yazdır").</p></div></div>
+  <div class="step"><div class="n">6</div><div><h3>Logo ve işletme adı</h3><p><b>Genel</b> bölümünden işletme adını ve logoyu ayarlayın — bekleme ekranında görünür.</p></div></div>
+  <div class="step"><div class="n">7</div><div><h3>Kiosku başlatın</h3><p>Hazır olunca <b>🖥️ Kiosku Başlat</b>. Tam ekran için masaüstündeki <b>kiosk-baslat.bat</b>'ı çalıştırın; otomatik açılış için kısayolunu Başlangıç'a koyun.</p></div></div>
+
+  <div class="note">Ödeme şu an kioskta alınmıyor (altyapı hazır, ileride eklenecek). Yazar kasa (ÖKC) için ayar yeri hazır. Kurulum yardımı: 📞 0537 618 63 16</div>
+  <div class="refresh" id="refresh"></div>
+</div>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  function set(id,cls,txt){var e=$(id);e.className='v '+cls;e.textContent=txt;}
+  function check(){
+    fetch('/api/menu',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){
+      var c=d.config||{};
+      if(c.licensed){set('stLic','ok','✓ Aktif');}else{set('stLic','bad','✗ Pasif — anahtar girin');}
+      if(!c.licensed){set('stConn','wait','—');set('stMenu','wait','—');return;}
+      if(d.error){set('stConn','bad','✗ '+(d.error.length>40?'ayarlanmadı':d.error));}else{set('stConn','ok','✓ Bağlı');}
+      var n=(d.categories||[]).reduce(function(s,x){return s+((x.items||[]).length);},0);
+      if(d.error){set('stMenu','wait','—');}else if(n>0){set('stMenu','ok','✓ '+n+' ürün');}else{set('stMenu','bad','ürün yok — menüyü seçin');}
+      if(c.licensed && !d.error && n>0){$('refresh').innerHTML='<span class="ok">Kurulum tamam! Kiosku başlatabilirsiniz.</span>';}
+    }).catch(function(){set('stLic','bad','servise ulaşılamadı');});
+    $('refresh').textContent=$('refresh').textContent||'Durum her 5 sn güncellenir';
+  }
+  check(); setInterval(check,5000);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kiosk Yönetim</title>
+<style>
+:root{--brand:#6366f1;--brand2:#8b5cf6;--bg:#f8fafc;--bg2:#f1f5f9;--card:#fff;--tx:#0f172a;--tx2:#334155;--mut:#94a3b8;--line:#e2e8f0;--grn:#10b981;--red:#ef4444;--radius:14px;--shadow:0 4px 14px rgba(15,23,42,.06)}
+*{box-sizing:border-box;margin:0;font-family:system-ui,-apple-system,'Segoe UI',Roboto,Arial,sans-serif}
+body{background:var(--bg);color:var(--tx)}
+#gate{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#6366f1,#8b5cf6,#ec4899);padding:20px}
+#gate .login-card{background:#fff;border-radius:24px;padding:38px 30px;width:100%;max-width:360px;box-shadow:0 25px 60px rgba(0,0,0,.3);text-align:center}
+#gate .logo{width:64px;height:64px;border-radius:18px;margin:0 auto 16px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-size:32px}
+#gate h1{font-size:22px;font-weight:800;margin-bottom:4px}
+.top{position:sticky;top:0;z-index:6;display:flex;align-items:center;gap:10px;padding:13px 20px;background:#fff;border-bottom:1px solid var(--line)}
+.top .logo{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--brand2));display:grid;place-items:center;font-weight:800;color:#fff}
+.top h1{font-size:16px;font-weight:700}.top .st{margin-left:auto;font-size:12.5px}
+.modesw{display:inline-flex;margin-left:18px;background:var(--bg2);border-radius:999px;padding:3px;border:1px solid var(--line)}
+.modesw button{border:0;background:none;padding:7px 16px;border-radius:999px;font-weight:700;font-size:13px;color:var(--tx2);cursor:pointer}
+.modesw button.on{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.35)}
+.advnote{margin:14px 10px 0;font-size:11.5px;color:var(--mut);line-height:1.45}
+.sidebar{position:fixed;left:0;top:57px;bottom:0;width:212px;padding:14px 10px;display:flex;flex-direction:column;gap:3px;overflow:auto;background:#fff;border-right:1px solid var(--line)}
+.sidebar button{display:flex;align-items:center;gap:9px;text-align:left;border:0;background:none;color:var(--tx2);font-size:14px;font-weight:600;padding:11px 12px;border-radius:10px;cursor:pointer}
+.sidebar button:hover{background:var(--bg2)}
+.sidebar button.on{background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff}
+.wrap{margin-left:212px;max-width:780px;padding:18px 22px 70px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:14px;box-shadow:var(--shadow)}
+.card.sec{display:none}.card.sec.on{display:block}
+.card h2{font-size:15px;font-weight:800;margin-bottom:14px}
+label{display:block;font-size:12.5px;color:var(--tx2);margin:10px 0 4px;font-weight:600}
+.in{width:100%;padding:11px 13px;border-radius:10px;border:2px solid var(--line);background:#f8fafc;color:var(--tx);font-size:14px}
+.in:focus{outline:none;border-color:var(--brand);background:#fff}
+select.in{appearance:none}
+textarea.in{min-height:70px;font-family:ui-monospace,Consolas,monospace;font-size:12.5px}
+.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1;min-width:130px}
+.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:700;font-size:14px;background:linear-gradient(135deg,var(--brand),var(--brand2));color:#fff;cursor:pointer}
+.btn.sm{padding:7px 11px;font-size:12.5px}
+.btn2{background:#fff;color:var(--tx2);border:1px solid var(--line)}
+.hint{font-size:11.5px;color:var(--mut);margin-top:6px;line-height:1.45}
+.ok{color:var(--grn)}.bad{color:var(--red)}
+.logoprev{height:48px;border-radius:8px;background:#f1f5f9;border:1px solid var(--line);padding:4px 8px;display:inline-flex;align-items:center;margin-top:6px}.logoprev img{max-height:40px}
+.customrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid var(--line)}
+.savebar{position:fixed;bottom:0;left:212px;right:0;background:#fff;border-top:1px solid var(--line);padding:12px 20px;display:flex;gap:10px;justify-content:flex-end;z-index:6}
+.soon{font-size:11px;background:#fef3c7;color:#92400e;border-radius:6px;padding:2px 7px;margin-left:6px}
+.err{background:#fee2e2;color:#991b1b;border:1px solid #fecaca;border-radius:10px;padding:10px 12px;font-size:13px;margin:0 0 12px;display:none}
+#langBoxes label{display:inline-flex;gap:6px;color:var(--tx2);font-weight:600}
+@media(max-width:720px){.sidebar{position:static;width:auto;flex-direction:row;flex-wrap:wrap;top:0}.wrap{margin-left:0}.savebar{left:0}}
+</style>
+</head>
+<body>
+
+<div id="gate"><div class="login-card">
+  <div class="logo">⚙️</div>
+  <h1 style="font-size:19px">Kiosk Yönetim</h1>
+  <p class="hint">Yönetici PIN'i ile girin.</p>
+  <div class="err" id="gateErr"></div>
+  <input class="in" id="gpin" type="password" inputmode="numeric" placeholder="PIN" style="text-align:center;letter-spacing:4px;margin-top:10px">
+  <button class="btn" id="gbtn" style="width:100%;margin-top:10px">Giriş</button>
+  <p class="hint" style="margin-top:14px">İlk kurulum PIN'i: 1234 (girince değiştirin)</p>
+</div></div>
+<div id="panel" style="display:none">
+  <div class="top"><div class="logo">K</div><h1>Kiosk Yönetim</h1><div class="modesw" id="modeSw"><button data-m="easy">Kolay</button><button data-m="adv">Gelişmiş</button></div><span class="st" id="st"></span></div>
+  <aside class="sidebar" id="sidenav"></aside>
+  <div class="wrap">
+    <div class="err" id="err"></div>
+
+    <div class="card sec" id="sec-genel" data-sec="genel"><h2>Genel</h2>
+      <label>İşletme adı (kiosk ekranında görünür)</label><input class="in" id="name">
+      <label>Logo</label>
+      <div class="row" style="align-items:center"><input class="in" id="logoFile" type="file" accept="image/*" style="flex:2"><span class="logoprev" id="logoPrev">—</span></div>
+      <div class="hint">PNG/JPG/SVG, en fazla 3 MB. Bekleme ekranında ve üstte görünür.</div>
+      <label>Kiosk kolay mod (hızlı sipariş)</label>
+      <select class="in" id="easyMode"><option value="">Kapalı — ürün detayı, seçenekler, öneri ve ödeme ekranı gösterilir</option><option value="true">Açık — ürüne dokununca direkt sepete; öneri ve ödeme ekranı atlanır (büyük kartlar)</option></select>
+      <div class="hint">Kolay mod: müşteri ürünlere dokunur → <b>Siparişi ver</b> → bitti. Yoğun saatler ve hızlı servis için.</div>
+    </div>
+
+    <div class="card sec" id="sec-gorunum" data-sec="gorunum"><h2>Görünüm (tema &amp; bekleme ekranı)</h2>
+      <label>Tema rengi</label>
+      <div class="row" style="align-items:center">
+        <div id="themeSwatches" style="display:flex;gap:10px;flex-wrap:wrap;flex:2"></div>
+        <div style="flex:0 0 auto;display:flex;align-items:center;gap:8px"><input type="color" id="themeColorPick" style="width:52px;height:40px;border:1px solid var(--line);border-radius:10px;background:none"><input class="in" id="themeColor" style="width:120px" placeholder="#ff5a1f"></div>
+      </div>
+      <label>Tema modu</label>
+      <select class="in" id="themeMode"><option value="">Açık (varsayılan)</option><option value="dark">Koyu</option></select>
+      <div style="border-top:1px solid var(--line);margin:16px 0"></div>
+      <label>Bekleme ekranı görselleri (slider)</label>
+      <div class="row" style="align-items:center"><input class="in" id="sliderFile" type="file" accept="image/*" multiple style="flex:2"><span class="hint" style="flex:1">Birden fazla seçebilirsiniz. Boş bırakılırsa logo + marka adı gösterilir.</span></div>
+      <div id="sliderList" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px"></div>
+    </div>
+
+    <div class="card sec" id="sec-samba" data-sec="samba"><h2>SambaPOS Bağlantısı</h2>
+      <div class="row">
+        <div style="flex:2"><label>Adres</label><input class="in" id="sambaHost" placeholder="localhost"></div>
+        <div style="flex:1"><label>Port</label><input class="in" id="sambaPort" placeholder="9000" inputmode="numeric"></div>
+      </div>
+      <div class="row">
+        <div><label>Yönetici kullanıcı</label><input class="in" id="sambaUser" autocapitalize="off"></div>
+        <div><label>Şifresi (PIN değil)</label><input class="in" id="sambaPass" type="password" placeholder="••••••"></div>
+      </div>
+      <div class="row">
+        <div><label>Menü(ler) — ürünler buradan çekilir (birden fazlaysa virgülle)</label><input class="in" id="menus" placeholder="Menu    (örn: Kahvaltı, Ana Menü)"></div>
+        <div><label>Terminal</label><input class="in" id="terminal" placeholder="Kiosk"></div>
+      </div>
+      <div class="row">
+        <div><label>Departman (gel-al)</label><input class="in" id="department" placeholder="Gel-Al"></div>
+        <div><label>Adisyon tipi</label><input class="in" id="ticketType" placeholder="Adisyon"></div>
+      </div>
+      <div style="margin-top:12px"><button class="btn btn2" id="testBtn">Bağlantıyı test et</button> <button class="btn" id="pullBtn">⤵ SambaPOS'tan çek (listeler)</button> <button class="btn btn2" id="menuBtn">Menüyü önizle (ürünler)</button> <span id="testRes"></span></div>
+      <div class="hint">"SambaPOS'tan çek" → <b>varlık tipleri, varlıklar, ödeme tipleri, varlık ekranları, menüler</b> SambaPOS'tan gelir (kutulara tıklayıp seçersiniz). <b>Departman / adisyon tipi / terminal</b> SambaPOS API'sinde listelenmez — bunları elle yazıp Sipariş Yönleri'ndeki <b>"⚡ test et"</b> ile doğrulayın.</div>
+      <div class="hint" id="menuPrev" style="margin-top:6px"></div>
+      <div class="hint">Kiosk siparişleri bu departman/adisyon tipine <b>gel-al</b> olarak düşer. Ürünler yukarıdaki <b>Menü</b>'den gelir (SambaPOS'taki menüyü seçin). Bağlantı kullanıcısı SambaPOS'ta Yönetici (Admin) olmalı.</div>
+    </div>
+
+    <div class="card sec" id="sec-yazici" data-sec="yazici"><h2>Yazıcı / Fiş</h2>
+      <label>Sipariş sonrası çalıştırılacak yazdırma komutu (SambaPOS otomasyon komutu)</label>
+      <input class="in" id="printCommand" placeholder="ör. Fiş Yazdır  /  Mutfağa Gönder">
+      <div class="hint">Sipariş verilince SambaPOS'ta bu otomasyon komutu adisyon üzerinde çalışır (fiş/mutfak yazıcısına gönderir). Boş bırakılırsa SambaPOS'un kendi adisyon kuralları neyi yazdırıyorsa o çalışır. Komut adını SambaPOS'taki adıyla birebir yazın.</div>
+      <div style="border-top:1px solid var(--line);margin:18px 0 6px"></div>
+      <h2 style="margin-bottom:6px">🧾 Kiosk'un kendi fiş yazıcısı</h2>
+      <div class="hint" style="margin-top:0">Kioskun içinde termal fiş yazıcısı varsa müşteriye <b>sipariş numaralı fiş</b> basılır (ürünler, toplam, "kasada ödeyiniz"). Yazıcı bu bilgisayarda Windows'a kurulu olmalı. Boş bırakılırsa fiş basılmaz.</div>
+      <div class="row">
+        <div style="flex:2"><label>Yazıcı</label><select class="in" id="kioskPrinter"><option value="">— Kapalı (fiş basma) —</option></select></div>
+        <div><label>Kâğıt genişliği</label><select class="in" id="kioskPrinterChars"><option value="42">80 mm (42 karakter)</option><option value="48">80 mm geniş (48 karakter)</option><option value="32">58 mm (32 karakter)</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>Türkçe karakter</label><select class="in" id="kioskPrinterAscii"><option value="">Yazıcı destekliyor (CP857)</option><option value="true">Sadeleştir (ş→s, ğ→g …)</option></select></div>
+        <div style="flex:2"><label>Fiş alt yazısı</label><input class="in" id="kioskPrinterFooter" placeholder="ör. Bizi tercih ettiğiniz için teşekkürler • Wi-Fi: ..."></div>
+      </div>
+      <div style="margin-top:12px"><button class="btn btn2" id="prnRefresh">↻ Yazıcıları yenile</button> <button class="btn" id="prnTest">🧾 Test fişi yazdır</button> <span id="prnRes"></span></div>
+      <div class="hint">Türkçe harfler bozuk çıkarsa "Sadeleştir" seçin. Yazıcı listede yoksa yazıcıyı Windows'a "tüm kullanıcılar için" kurun ve "Yenile"ye basın.</div>
+    </div>
+
+    <div class="card sec" id="sec-urunler" data-sec="urunler"><h2>Ürünler &amp; Kategoriler</h2>
+      <div class="row" style="align-items:center">
+        <div style="flex:2"><label>Menü</label><select class="in" id="catMenu"></select></div>
+        <div style="flex:0 0 auto;align-self:flex-end"><button class="btn" id="catPull">⤵ Ürünleri çek</button></div>
+      </div>
+      <div class="hint">SambaPOS menüsündeki tüm ürünler burada görünür. <b>⭐</b> = öne çıkan (kioskta en üstte "Öne Çıkanlar"), <b>💡</b> = sepette öner ("Bunları da ister misiniz?"), <b>Görünür/Gizli</b> = kiosk ekranından kaldır (SambaPOS'a dokunmaz). Ürün seçenekleri (acılı, porsiyon, ekstra…) SambaPOS'taki <b>sipariş etiketlerinden</b> otomatik gelir. Aşağıdan kioska özel ürün de ekleyebilirsiniz.</div>
+      <div id="catStat" class="hint" style="margin-top:6px"></div>
+      <div id="catList" style="margin-top:10px"></div>
+      <div style="border:1px dashed var(--line);border-radius:10px;padding:12px;margin-top:12px">
+        <div style="font-weight:800;font-size:13.5px;margin-bottom:8px">➕ Kiosk'a ürün ekle</div>
+        <div class="row">
+          <input class="in" id="xpCat" list="dl_catNames" placeholder="Kategori (var olan / yeni)" style="flex:1.4">
+          <input class="in" id="xpName" placeholder="Ürün adı" style="flex:1.4">
+          <input class="in" id="xpPrice" placeholder="Fiyat ₺" inputmode="decimal" style="flex:0 0 100px">
+        </div>
+        <div class="row" style="margin-top:6px">
+          <input class="in" id="xpProd" list="dl_products" placeholder="SambaPOS ürünü (sipariş bu ürüne düşer) — opsiyonel" style="flex:2">
+          <button class="btn btn2" id="xpAdd" style="flex:0 0 auto">Ekle</button>
+        </div>
+        <div class="hint">Eklenen ürün kioskta görünür. Sipariş verilince seçtiğiniz SambaPOS ürününe düşer; SambaPOS ürünü seçmezseniz yalnızca ekranda gösterilir (sipariş edilemez).</div>
+      </div>
+      <div id="xpList" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card sec" id="sec-veriler" data-sec="veriler"><h2>SambaPOS Verileri</h2>
+      <div><button class="btn" id="dataPull">⤵ Verileri çek</button> <span id="dataStat" class="hint"></span></div>
+      <div class="hint">Varlık tipleri ve varlıklar (masalar, müşteriler…), adisyon tipleri, departmanlar, terminaller, ödeme tipleri ve otomasyon komutları — SambaPOS'tan okunur, sadece görüntüleme.</div>
+      <div id="dataWrap" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card sec" id="sec-siparis" data-sec="siparis"><h2>Sipariş Yönleri — nereye düşsün</h2>
+      <div id="destRows"></div>
+      <button class="btn btn2" id="destAdd" style="margin-top:8px">+ Yön ekle</button>
+      <div class="hint">Her yön için <b>departman / adisyon tipi</b> ve istenirse <b>varlık tipi</b> seçin (önce "SambaPOS'tan çek", sonra kutudan seçin). <b>"Müşteri masa / sıra no girsin"</b> işaretliyse kioskta o yönde müşteriden numara istenir ve sipariş o varlığa (ör. Masalar) bağlanır; <b>işaretsizse hiç sorulmaz, gel-al olarak düşer.</b> Kioskta sadece <b>açık</b> yönler çıkar; tek açık yön varsa hiç sormadan oraya düşer. Örn: "Gel-Al" (kutu işaretsiz) + "Masada" (varlık: Masalar, kutu işaretli).</div>
+    </div>
+
+    <div class="card sec" id="sec-kimlik" data-sec="kimlik"><h2>Kiosk Kimliği (SambaPOS'ta "Kiosk" olarak görünsün)</h2>
+      <div class="row">
+        <div><label>Sipariş hangi varlık ekranına düşsün</label><input class="in" id="kioskEntityScreen" list="dl_entityScreen" placeholder="ör. Kiosk Siparişleri"></div>
+        <div><label>Varlık tipi</label><input class="in" id="kioskEntityType" list="dl_entityType" placeholder="ör. Kiosk"></div>
+      </div>
+      <label>Kiosk varlık adı (fişte bu yazar)</label><input class="in" id="kioskEntityName" placeholder="Kiosk">
+      <div class="hint">Her kiosk siparişine seçtiğiniz <b>varlık tipinde</b> bu adda bir varlık bağlanır; sipariş o <b>varlık ekranında</b> görünür ve <b>fişte "Kiosk"</b> yazar. Önce "SambaPOS Bağlantısı" bölümünde <b>⤵ SambaPOS'tan çek</b> deyin, sonra kutulardan seçin.<br><b>SambaPOS'ta bir kez yapılacak:</b> bu adda bir <i>varlık tipi</i> (ör. "Kiosk"), içinde bu adda bir <i>varlık</i> ("Kiosk") ve onu gösteren bir <i>varlık ekranı</i> oluşturun. Boş bırakılırsa kiosk işareti eklenmez.</div>
+    </div>
+
+    <div class="card sec" id="sec-diller" data-sec="diller"><h2>Diller</h2>
+      <div id="langBoxes" style="display:flex;gap:16px;flex-wrap:wrap;font-size:15px">
+        <label><input type="checkbox" data-lang="tr" checked disabled> Türkçe</label>
+        <label><input type="checkbox" data-lang="en"> English</label>
+        <label><input type="checkbox" data-lang="ar"> العربية</label>
+        <label><input type="checkbox" data-lang="de"> Deutsch</label>
+        <label><input type="checkbox" data-lang="ru"> Русский</label>
+        <label><input type="checkbox" data-lang="fr"> Français</label>
+      </div>
+      <div class="hint">Seçilen diller kiosk ekranının üstünde görünür. Müşteri dili seçince <b>ürün adları dahil her şey</b> o dile çevrilir (otomatik, önbellekli; yanlış çeviriyi sonra düzeltebiliriz). Türkçe her zaman tabandır.</div>
+    </div>
+
+    <div class="card sec" id="sec-odeme" data-sec="odeme"><h2>Ödeme</h2>
+      <label>Ödeme modu</label>
+      <select class="in" id="payMode">
+        <option value="counter">Kasada öde (sipariş gider, ödeme kasada alınır)</option>
+        <option value="none">Ödeme alma (sadece sipariş)</option>
+        <option value="online">Kiosk'ta öde (QR ile kart / kart terminali)</option>
+      </select>
+      <div class="row">
+        <div><label>Kiosk'ta öde açıkken "Kasada öde" seçeneği</label><select class="in" id="payAllowCounter"><option value="">Görünsün</option><option value="false">Gizlensin (ödeme sadece kioskta)</option></select></div>
+      </div>
+      <div class="hint">"Kiosk'ta öde" seçilince müşteri sepetten sonra ödeme yöntemini seçer. Tutar SambaPOS fiyatlarından hesaplanır; ödeme onaylanınca sipariş SambaPOS'a <b>ödenmiş</b> olarak düşer.</div>
+
+      <div style="border-top:1px solid var(--line);margin:16px 0 6px"></div>
+      <h2 style="margin-bottom:6px">📱 QR ile kartla ödeme (iyzico)</h2>
+      <div class="row">
+        <div><label>Durum</label><select class="in" id="iyzicoEnabled"><option value="">Kapalı</option><option value="true">Açık</option></select></div>
+        <div><label>Ortam</label><select class="in" id="iyzicoMode"><option value="">Test (sandbox)</option><option value="live">Canlı (gerçek ödeme)</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>API anahtarı</label><input class="in" id="iyzicoApiKey" autocomplete="off" placeholder="iyzico panelinden"></div>
+        <div><label>Gizli anahtar (Secret)</label><input class="in" id="iyzicoSecret" type="password" autocomplete="new-password" placeholder="••••••"></div>
+      </div>
+      <div class="row">
+        <div><label>SambaPOS ödeme tipi</label><input class="in" id="iyzicoPayType" list="dl_paymentType" placeholder="Kredi Kartı"></div>
+        <div><label>Şehir (fatura)</label><input class="in" id="iyzicoCity" placeholder="Istanbul"></div>
+      </div>
+      <div style="margin-top:10px"><button class="btn btn2" id="iyzTest">Bağlantıyı test et</button> <span id="iyzRes"></span></div>
+      <div class="hint">Müşteri ekrandaki QR'ı telefonuyla okutup iyzico'nun güvenli sayfasında kartla öder; kiosk sonucu otomatik görür. Anahtarlar: iyzico üye işyeri paneli → Ayarlar → Firma Ayarları. Önce <b>Test (sandbox)</b> ile deneyin (sandbox-merchant.iyzipay.com'dan ücretsiz test hesabı).</div>
+
+      <div style="border-top:1px solid var(--line);margin:16px 0 6px"></div>
+      <h2 style="margin-bottom:6px">💳 Kiosk'a bağlı kart terminali</h2>
+      <div class="row">
+        <div><label>Terminal</label><select class="in" id="posBrand"><option value="">Kapalı</option><option value="sim">Simülasyon (test — para çekilmez)</option><option value="ingenico">Ingenico</option><option value="beko">Beko</option><option value="hugin">Hugin</option><option value="pavo">Pavo</option><option value="verifone">Verifone</option></select></div>
+        <div><label>Bağlantı (COM / IP:port)</label><input class="in" id="posConn" placeholder="COM3  /  192.168.1.50:5000"></div>
+      </div>
+      <div class="row">
+        <div><label>SambaPOS ödeme tipi</label><input class="in" id="posPayType" list="dl_paymentType" placeholder="Kredi Kartı"></div>
+      </div>
+      <div style="margin-top:10px"><button class="btn btn2" id="posTest">Terminali test et</button> <span id="posRes"></span></div>
+      <div class="hint">Müşteri kartını kiosktaki POS cihazına okutur. <b>Simülasyon</b> akışı uçtan uca denemek içindir. Marka entegrasyonları (Ingenico/Beko/Hugin/Pavo/Verifone) cihazın üretici SDK'sı ile eklenir — altyapı hazır, cihaz elinize geçince marka marka bağlanır.</div>
+      <div style="border-top:1px solid var(--line);margin:16px 0"></div>
+      <label>Ödeme seçenekleri — kioskta "Nasıl ödemek istersiniz?" ekranında çıkar</label>
+      <div id="payRows"></div>
+      <button class="btn btn2" id="payAdd" style="margin-top:8px">+ Ödeme tipi ekle</button>
+      <div class="hint">"Kasada öde" modunda bu seçenekler gösterilir. Her tipe <b>özel ikon</b> yükleyebilirsiniz; boşsa varsayılan ikon kullanılır.</div>
+    </div>
+
+    <div class="card sec" id="sec-okc" data-sec="okc"><h2>Yazar Kasa (ÖKC / Mali Fiş)</h2>
+      <div class="row">
+        <div><label>Durum</label><select class="in" id="fiscalEnabled"><option value="">Kapalı</option><option value="true">Aktif</option></select></div>
+        <div><label>Marka</label><select class="in" id="fiscalType"><option value="">Seçiniz</option><option value="ingenico">Ingenico</option><option value="hugin">Hugin</option><option value="beko">Beko</option><option value="profilo">Profilo</option><option value="verifone">Verifone</option><option value="token">Token</option><option value="olivetti">Olivetti</option><option value="diger">Diğer</option></select></div>
+      </div>
+      <div class="row">
+        <div><label>Bağlantı tipi</label><select class="in" id="fiscalConn"><option value="serial">Seri (COM)</option><option value="tcp">Ağ (TCP/IP)</option><option value="usb">USB</option></select></div>
+        <div><label>Port / IP adresi</label><input class="in" id="fiscalPort" placeholder="COM3  /  192.168.1.50"></div>
+      </div>
+      <div class="row">
+        <div><label>Seri hız (baud)</label><input class="in" id="fiscalBaud" placeholder="9600 / 19200 / 115200"></div>
+        <div><label>TCP port</label><input class="in" id="fiscalTcpPort" placeholder="ör. 100"></div>
+      </div>
+      <div class="row">
+        <div><label>ECR / Kasa seri no</label><input class="in" id="fiscalSerial" placeholder="cihaz seri no"></div>
+        <div><label>GMP3 sürümü</label><input class="in" id="fiscalGmp" placeholder="ör. 3.0"></div>
+      </div>
+      <div class="row">
+        <div><label>Belge tipi</label><select class="in" id="fiscalReceiptType"><option value="fis">Fiş</option><option value="fatura">Fatura</option></select></div>
+        <div><label>Üye işyeri no (varsa)</label><input class="in" id="fiscalMerchantNo" placeholder="opsiyonel"></div>
+      </div>
+      <label>Not</label><input class="in" id="fiscalNote" placeholder="opsiyonel açıklama">
+      <div style="margin-top:12px"><button class="btn btn2" id="fiscalBtn">Cihazı test et</button> <span id="fiscalRes"></span></div>
+      <div class="hint">Tüm alanlar aktiftir — bilgileri girip <b>Kaydet</b>'e basın. Cihazla gerçek mali fiş haberleşmesi dosyalardan (YazarKasa) marka marka açılır.</div>
+    </div>
+
+    <div class="card sec" id="sec-lisans" data-sec="lisans"><h2>Lisans</h2>
+      <label>Kiosk lisans anahtarı (ana lisanstan ayrı)</label><input class="in" id="kioskActivationKey" placeholder="KIOSK-XXXX-XXXX-XXXX">
+      <div class="hint" id="licSt" style="margin-top:8px"></div>
+    </div>
+
+    <div class="card sec" id="sec-guvenlik" data-sec="guvenlik"><h2>Güvenlik</h2>
+      <div class="row">
+        <div><label>Yönetici PIN (bu panel)</label><input class="in" id="adminPin" type="password" placeholder="değiştirmek için yazın"></div>
+        <div><label>Kiosk çıkış PIN'i (tam ekrandan çıkış)</label><input class="in" id="exitPin" placeholder="ör. 1234"></div>
+      </div>
+    </div>
+
+    <div class="hint" style="text-align:center">EnsariPOS Kiosk <span id="ver"></span></div>
+  </div>
+  <div class="savebar"><button class="btn btn2" id="openKiosk">Kiosk ekranını aç</button><button class="btn" id="saveBtn">Kaydet</button></div>
+</div>
+
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  var SECTIONS=[['genel','⚙️ Genel'],['gorunum','🎨 Görünüm'],['samba','🔌 SambaPOS Bağlantısı'],['urunler','🍔 Ürünler'],['veriler','🗂️ SambaPOS Verileri'],['siparis','🍽️ Sipariş Yönleri'],['kimlik','🏷️ Kiosk Kimliği'],['diller','🌐 Diller'],['odeme','💳 Ödeme'],['yazici','🖨️ Yazıcı / Fiş'],['okc','🧾 Yazar Kasa'],['lisans','🔑 Lisans'],['guvenlik','🔒 Güvenlik']];
+  // Kolay mod: sadece temel bölümler; Gelişmiş: hepsi. Tercih bu tarayıcıda hatırlanır.
+  var EASY_SECS=['genel','gorunum','samba','siparis'], adminMode='easy';
+  try{ adminMode=localStorage.getItem('kioskAdminMode')||'easy'; }catch(e){}
+  function buildNav(){ var n=$('sidenav'); if(!n)return; var list=SECTIONS.filter(function(s){ return adminMode==='adv'||EASY_SECS.indexOf(s[0])>=0; });
+    n.innerHTML=list.map(function(s){return '<button data-sec="'+s[0]+'">'+s[1]+'</button>';}).join('')+(adminMode==='adv'?'':'<div class="advnote">Ürünler, diller, ödeme, yazıcı, yazar kasa, kimlik ve güvenlik ayarları için üstten <b>Gelişmiş</b>\'e geçin.</div>');
+    [].forEach.call(document.querySelectorAll('#modeSw button'),function(b){ b.classList.toggle('on',b.getAttribute('data-m')===adminMode); });
+    var cur=document.querySelector('.card.sec.on'), ck=cur&&cur.getAttribute('data-sec'); showSec(ck&&list.some(function(s){return s[0]===ck;})?ck:'genel'); }
+  document.addEventListener('click',function(e){ var b=e.target.closest&&e.target.closest('#modeSw [data-m]'); if(!b)return; adminMode=b.getAttribute('data-m'); try{ localStorage.setItem('kioskAdminMode',adminMode); }catch(err){} buildNav(); });
+  function showSec(k){ [].forEach.call(document.querySelectorAll('.card.sec'),function(c){c.classList.toggle('on',c.getAttribute('data-sec')===k);}); [].forEach.call(document.querySelectorAll('#sidenav button'),function(b){b.classList.toggle('on',b.getAttribute('data-sec')===k);}); window.scrollTo(0,0); }
+  document.addEventListener('click',function(e){var b=e.target.closest&&e.target.closest('#sidenav [data-sec]');if(b)showSec(b.getAttribute('data-sec'));});
+  function err(m){var e=$('err');if(!m){e.style.display='none';return;}e.textContent=m;e.style.display='block';window.scrollTo(0,0);}
+  function api(path,opt){return fetch(path,Object.assign({credentials:'same-origin'},opt)).then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j&&j.error||('HTTP '+r.status));return j;});});}
+  var logoData=null;
+  // ---- Ürünler / katalog durumu ----
+  var hiddenSet={}, extraProducts=[], prodNameToId={}, featSet={}, upSet={};
+  function money(v){ v=parseFloat(v)||0; return v? (v.toFixed(v%1?2:0)+' ₺') : '—'; }
+  function dl(id){ var d=document.getElementById(id); if(!d){d=document.createElement('datalist');d.id=id;document.body.appendChild(d);} return d; }
+  function fillDL(id,arr){ dl(id).innerHTML=(arr||[]).map(function(v){return '<option value="'+esc(v)+'"></option>';}).join(''); }
+  function catMenuOptions(){
+    var sel=$('catMenu'); if(!sel)return;
+    var list=($('menus').value||'').split(',').map(function(s){return s.trim();}).filter(Boolean);
+    if(!list.length)list=['Menu'];
+    var cur=sel.value;
+    sel.innerHTML=list.map(function(m){return '<option'+(m===cur?' selected':'')+'>'+esc(m)+'</option>';}).join('');
+  }
+  function renderXp(){
+    var w=$('xpList'); if(!w)return;
+    if(!extraProducts.length){w.innerHTML='';return;}
+    w.innerHTML='<div style="font-size:12.5px;color:var(--tx2);font-weight:700;margin-bottom:4px">Eklenen ürünler</div>'+
+      extraProducts.map(function(p,i){ return '<div class="customrow"><span style="flex:1">'+esc(p.name||'')+' <span class="hint" style="display:inline">· '+esc(p.category||'Ekstra')+' · '+money(p.price)+(p.productId?'':' · <span class="bad">SambaPOS ürünü yok</span>')+'</span></span><button class="btn btn2 sm xp-del" data-i="'+i+'">Sil</button></div>'; }).join('');
+  }
+  function renderCat(cats){
+    var w=$('catList'); if(!w)return;
+    if(!cats||!cats.length){w.innerHTML='<div class="hint">Ürün gelmedi. SambaPOS bağlantısını ve menü adını kontrol edin.</div>';return;}
+    var names=[], prods=[]; prodNameToId={};
+    w.innerHTML=cats.map(function(c){
+      (c.items||[]).forEach(function(it){ if(it.name){prods.push(it.name); if(it.productId)prodNameToId[it.name]=it.productId;} });
+      names.push(c.name);
+      return '<div style="border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden">'+
+        '<div style="background:var(--bg2);padding:8px 12px;font-weight:800;font-size:13.5px">'+esc(c.name)+' <span class="hint" style="display:inline;font-weight:600">('+(c.items||[]).length+')</span></div>'+
+        (c.items||[]).map(function(it){ var hidden=!!hiddenSet[it.key];
+          return '<div class="customrow" style="padding:8px 12px">'+
+            '<span style="flex:1'+(hidden?';opacity:.45;text-decoration:line-through':'')+'">'+esc(it.name)+'</span>'+
+            '<span class="hint" style="display:inline;min-width:70px;text-align:right">'+money(it.price)+'</span>'+
+            '<button class="btn sm pf-tog '+(featSet[it.key]?'':'btn2')+'" data-key="'+esc(it.key)+'" title="Öne çıkan (kioskta en üstte)">⭐</button>'+
+            '<button class="btn sm pu-tog '+(upSet[it.key]?'':'btn2')+'" data-key="'+esc(it.key)+'" title="Sepette öner (bunu da ister misiniz?)">💡</button>'+
+            '<button class="btn sm '+(hidden?'btn2':'')+' cat-tog" data-key="'+esc(it.key)+'" style="min-width:76px">'+(hidden?'Gizli':'Görünür')+'</button>'+
+          '</div>'; }).join('')+'</div>';
+    }).join('');
+    fillDL('dl_catNames',names); fillDL('dl_products',prods.filter(function(v,i){return prods.indexOf(v)===i;}));
+  }
+  function loadCatalog(){
+    $('catStat').innerHTML='Çekiliyor…';
+    save(true).then(function(){return api('/api/admin/catalog?menu='+encodeURIComponent($('catMenu').value||''));}).then(function(r){
+      if(r.menuError){$('catStat').innerHTML='<span class="bad">'+esc(r.menuError)+'</span>';}
+      else{var n=0;(r.categories||[]).forEach(function(c){n+=(c.items||[]).length;});$('catStat').innerHTML='<span class="ok">✓ '+(r.categories||[]).length+' kategori, '+n+' ürün</span>';}
+      renderCat(r.categories||[]);
+      window.__lastCatalog=r;   // Veriler bölümü de bunu kullanabilir
+    }).catch(function(e){$('catStat').innerHTML='<span class="bad">'+esc(e.message)+'</span>';});
+  }
+  function renderData(r){
+    var w=$('dataWrap'); if(!w)return;
+    var o=r.options||{}, parts=[];
+    function block(title,arr){ if(!arr||!arr.length)return; parts.push('<div style="border:1px solid var(--line);border-radius:10px;margin-bottom:8px;overflow:hidden"><div style="background:var(--bg2);padding:8px 12px;font-weight:800;font-size:13.5px">'+esc(title)+' <span class="hint" style="display:inline;font-weight:600">('+arr.length+')</span></div><div style="padding:8px 12px;font-size:13px;color:var(--tx2);line-height:1.7">'+arr.map(esc).join(' · ')+'</div></div>'); }
+    // Varlıklar: her varlık tipi + içindeki varlıklar
+    if(r.entities){ Object.keys(r.entities).forEach(function(t){ block('Varlık: '+t, r.entities[t]); }); }
+    block('Varlık tipleri', o.entityTypes);
+    block('Adisyon tipleri', o.ticketTypes);
+    block('Departmanlar', o.departments);
+    block('Terminaller', o.terminals);
+    block('Ödeme tipleri', o.paymentTypes);
+    block('Otomasyon komutları', o.automationCommands);
+    block('Varlık ekranları', o.entityScreens);
+    block('Menüler', o.menus);
+    if(!parts.length){ parts.push('<div class="hint">Veri gelmedi. SambaPOS kullanıcısının <b>Yönetici</b> yetkisi olduğundan emin olun.'+(r.optionsError?' ('+esc(r.optionsError)+')':'')+'</div>'); }
+    w.innerHTML=parts.join('');
+  }
+  function loadData(){
+    $('dataStat').innerHTML='Çekiliyor…';
+    save(true).then(function(){return api('/api/admin/catalog?menu='+encodeURIComponent(($('catMenu')&&$('catMenu').value)||''));}).then(function(r){
+      var o=r.options||{}; var tot=0; Object.keys(o).forEach(function(k){ if(Array.isArray(o[k]))tot+=o[k].length; }); if(r.entities)Object.keys(r.entities).forEach(function(t){tot+=(r.entities[t]||[]).length;});
+      $('dataStat').innerHTML=tot?('<span class="ok">✓ '+tot+' kayıt</span>'):'<span class="bad">veri yok</span>';
+      renderData(r);
+    }).catch(function(e){$('dataStat').innerHTML='<span class="bad">'+esc(e.message)+'</span>';});
+  }
+  // toggle göster/gizle + eklenen ürün sil + ürün ekle (olay delegasyonu)
+  document.addEventListener('click',function(e){
+    var pf=e.target.closest&&e.target.closest('.pf-tog,.pu-tog');
+    if(pf){ var set=pf.classList.contains('pf-tog')?featSet:upSet, kk=pf.getAttribute('data-key'); if(set[kk])delete set[kk]; else set[kk]=1; pf.classList.toggle('btn2',!set[kk]); save(true); return; }
+    var t=e.target.closest&&e.target.closest('.cat-tog');
+    if(t){ var k=t.getAttribute('data-key'); if(hiddenSet[k])delete hiddenSet[k]; else hiddenSet[k]=1; var card=t.closest('.customrow'); var hidden=!!hiddenSet[k]; var lbl=card.querySelector('span'); lbl.style.opacity=hidden?'.45':''; lbl.style.textDecoration=hidden?'line-through':''; t.textContent=hidden?'Gizli':'Görünür'; t.classList.toggle('btn2',hidden); save(true); return; }
+    var d=e.target.closest&&e.target.closest('.xp-del');
+    if(d){ extraProducts.splice(+d.getAttribute('data-i'),1); renderXp(); save(true); return; }
+    var a=e.target.closest&&e.target.closest('#xpAdd');
+    if(a){ var name=$('xpName').value.trim(); if(!name){err('Ürün adı girin.');return;} err('');
+      var prodName=$('xpProd').value.trim(); var pid=prodNameToId[prodName]||0;
+      extraProducts.push({category:$('xpCat').value.trim()||'Ekstra',name:name,price:parseFloat($('xpPrice').value)||0,productId:pid,icon:''});
+      $('xpName').value='';$('xpPrice').value='';$('xpProd').value='';
+      renderXp(); save(true); return; }
+  });
+
+  // ---- görsel yükleme + tema + slider + ödeme tipleri ----
+  function fileToDataUrl(f){ return new Promise(function(res,rej){ var r=new FileReader(); r.onload=function(){res(r.result);}; r.onerror=rej; r.readAsDataURL(f); }); }
+  function uploadImg(dataUrl){ return api('/api/admin/upload',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:dataUrl})}).then(function(r){return r.path;}); }
+  var THEMES=['#ff5a1f','#e11d48','#16a34a','#2563eb','#7c3aed','#0891b2','#d97706','#111827'];
+  function renderSwatches(){ var cur=($('themeColor').value||'#ff5a1f').toLowerCase(); $('themeSwatches').innerHTML=THEMES.map(function(c){return '<button type="button" data-c="'+c+'" style="width:40px;height:40px;border-radius:10px;border:3px solid '+(cur===c?'#111827':'#fff')+';background:'+c+';box-shadow:0 1px 4px rgba(0,0,0,.2);cursor:pointer"></button>';}).join(''); }
+  var sliderImages=[];
+  function renderSlider(){ $('sliderList').innerHTML=sliderImages.map(function(src,i){return '<div style="position:relative"><img src="'+esc(src)+'" style="height:80px;border-radius:10px;border:1px solid var(--line);object-fit:cover"><button type="button" class="sl-del" data-i="'+i+'" style="position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;background:var(--red);color:#fff;font-weight:700;cursor:pointer">✕</button></div>';}).join(''); }
+  var payList=[];
+  function payDefaults(){ return [{key:'counter',label:'Kasada Öde',icon:'',enabled:true},{key:'cash',label:'Nakit',icon:'',enabled:true},{key:'card',label:'Kredi Kartı',icon:'',enabled:true}]; }
+  function renderPay(){ $('payRows').innerHTML=payList.map(function(p,i){ return '<div class="payrow" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px"><div class="row" style="align-items:center">'+
+    '<label style="flex:0 0 auto;margin:0;color:var(--tx)"><input type="checkbox" class="p-en" '+(p.enabled!==false?'checked':'')+'> Açık</label>'+
+    '<input class="in p-label" value="'+esc(p.label||'')+'" placeholder="Ödeme adı">'+
+    '<span style="flex:0 0 auto">'+(p.icon?'<img src="'+esc(p.icon)+'" style="height:32px;vertical-align:middle">':'<span class="hint" style="display:inline">ikon yok</span>')+'</span>'+
+    '<label class="btn btn2 sm" style="flex:0 0 auto;cursor:pointer">İkon<input type="file" accept="image/*" class="p-file" data-i="'+i+'" style="display:none"></label>'+
+    '<button type="button" class="btn btn2 sm p-del" data-i="'+i+'">Sil</button>'+
+    '<input type="hidden" class="p-key" value="'+esc(p.key||'')+'"><input type="hidden" class="p-icon" value="'+esc(p.icon||'')+'"></div></div>'; }).join(''); }
+  function collectPay(){ payList=[].map.call(document.querySelectorAll('#payRows .payrow'),function(r){ var lbl=r.querySelector('.p-label').value.trim(); return {enabled:r.querySelector('.p-en').checked,label:lbl,key:r.querySelector('.p-key').value||lbl.toLowerCase().replace(/\s+/g,'-'),icon:r.querySelector('.p-icon').value}; }); }
+
+  $('themeSwatches').addEventListener('click',function(e){ var b=e.target.closest('[data-c]'); if(!b)return; var c=b.getAttribute('data-c'); $('themeColor').value=c; try{$('themeColorPick').value=c;}catch(e){} renderSwatches(); });
+  $('themeColorPick').addEventListener('input',function(){ $('themeColor').value=this.value; renderSwatches(); });
+  $('themeColor').addEventListener('input',function(){ try{$('themeColorPick').value=this.value;}catch(e){} renderSwatches(); });
+  $('sliderFile').onchange=function(){ var files=[].slice.call(this.files||[]); if(!files.length)return; var chain=Promise.resolve(); files.forEach(function(f){ chain=chain.then(function(){return fileToDataUrl(f).then(uploadImg).then(function(p){sliderImages.push(p);renderSlider();});}); }); chain.then(function(){ $('sliderFile').value=''; save(true); }).catch(function(e){err(e.message);}); };
+  $('sliderList').addEventListener('click',function(e){ var b=e.target.closest('.sl-del'); if(!b)return; sliderImages.splice(+b.getAttribute('data-i'),1); renderSlider(); save(true); });
+  document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('#payAdd'); if(a){collectPay();payList.push({key:'',label:'',icon:'',enabled:true});renderPay();return;} var d=e.target.closest&&e.target.closest('.p-del'); if(d){collectPay();payList.splice(+d.getAttribute('data-i'),1);renderPay();} });
+  document.addEventListener('change',function(e){
+    var pf=e.target.closest&&e.target.closest('.p-file'); if(pf&&pf.files&&pf.files[0]){ var i=+pf.getAttribute('data-i'); collectPay(); fileToDataUrl(pf.files[0]).then(uploadImg).then(function(p){ payList[i].icon=p; renderPay(); save(true); }).catch(function(e){err(e.message);}); return; }
+    var df=e.target.closest&&e.target.closest('.d-file'); if(df&&df.files&&df.files[0]){ var j=+df.getAttribute('data-i'); collectDest(); fileToDataUrl(df.files[0]).then(uploadImg).then(function(p){ destList[j].iconImg=p; renderDest(); save(true); }).catch(function(e){err(e.message);}); }
+  });
+
+  $('gbtn').onclick=function(){
+    api('/api/admin/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:$('gpin').value})})
+      .then(function(){$('gate').style.display='none';$('panel').style.display='';load();buildNav();autoOptions();})
+      .catch(function(e){$('gateErr').textContent=e.message;$('gateErr').style.display='block';});
+  };
+  $('gpin').addEventListener('keydown',function(e){if(e.key==='Enter')$('gbtn').click();});
+
+  var FIELDS=['name','easyMode','sambaHost','sambaPort','sambaUser','menus','terminal','department','ticketType','kioskEntityScreen','kioskEntityType','kioskEntityName','payMode','payAllowCounter','iyzicoEnabled','iyzicoMode','iyzicoApiKey','iyzicoPayType','iyzicoCity','posBrand','posConn','posPayType','themeColor','themeMode','printCommand','kioskPrinterChars','kioskPrinterAscii','kioskPrinterFooter','kioskPrinter','fiscalEnabled','fiscalType','fiscalConn','fiscalPort','fiscalBaud','fiscalTcpPort','fiscalSerial','fiscalGmp','fiscalReceiptType','fiscalMerchantNo','fiscalNote','kioskActivationKey','exitPin'];
+  var destList=[];
+  function destDefaults(){ return [ {enabled:true,label:'Gel-Al',icon:'📦',department:'',ticketType:'',entityType:''}, {enabled:true,label:'Masada',icon:'🪑',department:'',ticketType:'',entityType:'Masalar'} ]; }
+  function renderDest(){
+    $('destRows').innerHTML=destList.map(function(d,i){ return '<div class="destrow" style="border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px">'+
+      '<div class="row" style="align-items:center"><label style="flex:0 0 auto;margin:0;color:var(--tx)"><input type="checkbox" class="d-en" '+(d.enabled!==false?'checked':'')+'> Açık</label>'+
+      '<input class="in d-icon" style="flex:0 0 56px;text-align:center" maxlength="2" value="'+esc(d.icon||'')+'" placeholder="🍽">'+
+      '<span class="d-icprev" style="flex:0 0 auto">'+(d.iconImg?'<img src="'+esc(d.iconImg)+'" style="height:30px;vertical-align:middle">':'')+'</span>'+
+      '<label class="btn btn2 sm" style="flex:0 0 auto;cursor:pointer">İkon<input type="file" accept="image/*" class="d-file" data-i="'+i+'" style="display:none"></label>'+
+      '<input type="hidden" class="d-iconImg" value="'+esc(d.iconImg||'')+'">'+
+      '<input class="in d-label" value="'+esc(d.label||'')+'" placeholder="Yön adı">'+
+      '<button type="button" class="btn btn2 d-del" style="flex:0 0 auto" data-i="'+i+'">Sil</button></div>'+
+      '<div class="row" style="margin-top:6px">'+
+      '<input class="in d-dept" list="dl_department" value="'+esc(d.department||'')+'" placeholder="Departman">'+
+      '<input class="in d-tt" list="dl_ticketType" value="'+esc(d.ticketType||'')+'" placeholder="Adisyon tipi">'+
+      '<input class="in d-et" list="dl_entityType" value="'+esc(d.entityType||'')+'" placeholder="Varlık tipi (opsiyonel)"></div>'+
+      '<label style="display:flex;align-items:center;gap:8px;margin-top:8px;color:var(--tx);font-weight:600"><input type="checkbox" class="d-ask" '+((d.ask!==undefined?d.ask:/masa/i.test(d.entityType||''))?'checked':'')+'> Müşteri masa / sıra no girsin (bu yönde)</label>'+
+      '<div style="margin-top:8px"><button type="button" class="btn btn2 sm d-test" data-i="'+i+'">⚡ Bu yönü SambaPOS\'ta test et</button> <span class="d-testres" style="font-size:12.5px;margin-left:6px"></span></div></div>'; }).join('');
+  }
+  function collectDest(){ destList=[].map.call(document.querySelectorAll('#destRows .destrow'),function(r){ return {enabled:r.querySelector('.d-en').checked,icon:r.querySelector('.d-icon').value,iconImg:r.querySelector('.d-iconImg').value,label:r.querySelector('.d-label').value.trim(),department:r.querySelector('.d-dept').value.trim(),ticketType:r.querySelector('.d-tt').value.trim(),entityType:r.querySelector('.d-et').value.trim(),ask:r.querySelector('.d-ask').checked}; }); }
+  document.addEventListener('click',function(e){ var a=e.target.closest&&e.target.closest('#destAdd'); if(a){collectDest();destList.push({enabled:true,label:'',icon:'🍽',department:'',ticketType:'',entityType:''});renderDest();return;} var b=e.target.closest&&e.target.closest('.d-del'); if(b){collectDest();destList.splice(+b.getAttribute('data-i'),1);renderDest();return;}
+    var t=e.target.closest&&e.target.closest('.d-test'); if(t){ var row=t.closest('.destrow'); var rs=row.querySelector('.d-testres'); rs.innerHTML='test ediliyor…';
+      var payload={department:row.querySelector('.d-dept').value.trim(),ticketType:row.querySelector('.d-tt').value.trim(),terminal:($('terminal').value||'').trim()};
+      api('/api/admin/dest-test',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)}).then(function(r){ rs.innerHTML=r.ok?'<span class="ok">✓ '+esc(r.info||'Geçerli')+'</span>':'<span class="bad">✗ '+esc(r.error||'Hata')+'</span>'; }).catch(function(e){ rs.innerHTML='<span class="bad">✗ '+esc(e.message)+'</span>'; });
+    } });
+  function load(){
+    api('/api/admin/settings').then(function(s){
+      FIELDS.forEach(function(k){ if($(k)!=null)$(k).value=s[k]||''; });
+      if(s.hasSambaPass)$('sambaPass').placeholder='••••••••  (kayıtlı)';
+      $('iyzicoSecret').placeholder=s.hasIyzicoSecret?'••••••••  (kayıtlı)':'••••••';
+      $('ver').textContent='v'+(s.version||'');
+      $('st').innerHTML=s.licensed?'<span class="ok">● Lisans aktif</span>':'<span class="bad">● Lisans pasif</span>';
+      $('licSt').innerHTML=s.licensed?'<span class="ok">✓ Lisans aktif</span>':('<span class="bad">Lisans pasif</span>'+(s.licenseError?' — '+esc(s.licenseError):''));
+      if(s.logo)$('logoPrev').innerHTML='<img src="'+esc(s.logo)+'">';
+      var langs=(s.languages||'tr').split(',');
+      [].forEach.call(document.querySelectorAll('#langBoxes [data-lang]'),function(cb){ var c=cb.getAttribute('data-lang'); cb.checked = c==='tr' || langs.indexOf(c)!==-1; });
+      try{destList=JSON.parse(s.destinations||'[]');}catch(e){destList=[];} if(!destList.length)destList=destDefaults(); renderDest();
+      hiddenSet={}; try{(JSON.parse(s.hiddenProducts||'[]')||[]).forEach(function(k){hiddenSet[k]=1;});}catch(e){}
+      featSet={}; try{(JSON.parse(s.featuredProducts||'[]')||[]).forEach(function(k){featSet[k]=1;});}catch(e){}
+      upSet={}; try{(JSON.parse(s.upsellProducts||'[]')||[]).forEach(function(k){upSet[k]=1;});}catch(e){}
+      try{extraProducts=JSON.parse(s.extraProducts||'[]')||[];}catch(e){extraProducts=[];} renderXp();
+      try{sliderImages=JSON.parse(s.sliderImages||'[]')||[];}catch(e){sliderImages=[];} renderSlider();
+      try{payList=JSON.parse(s.payOptions||'[]')||[];}catch(e){payList=[];} if(!payList.length)payList=payDefaults(); renderPay();
+      if(!$('kioskPrinterChars').value)$('kioskPrinterChars').value='42';
+      loadPrinters(s.kioskPrinter||'');
+      if(!$('themeColor').value)$('themeColor').value='#ff5a1f'; try{$('themeColorPick').value=$('themeColor').value;}catch(e){} renderSwatches();
+      catMenuOptions();
+    }).catch(function(e){err(e.message);});
+  }
+  $('logoFile').onchange=function(){
+    var f=this.files&&this.files[0];if(!f)return;var r=new FileReader();
+    r.onload=function(){logoData=r.result;$('logoPrev').innerHTML='<img src="'+logoData+'">';};r.readAsDataURL(f);
+  };
+  $('testBtn').onclick=function(){
+    $('testRes').textContent='…';
+    // once kaydet (baglanti bilgileri), sonra test
+    save(true).then(function(){return api('/api/admin/test');}).then(function(r){
+      $('testRes').innerHTML=r.ok?'<span class="ok">✓ Bağlandı</span>':'<span class="bad">'+esc(r.error||'Hata')+'</span>';
+    }).catch(function(e){$('testRes').innerHTML='<span class="bad">'+esc(e.message)+'</span>';});
+  };
+  function save(silent){
+    var body={};FIELDS.forEach(function(k){if($(k)!=null)body[k]=$(k).value;});
+    if(!prnLoaded) delete body.kioskPrinter;   // yazıcı listesi henüz gelmediyse kayıtlı yazıcıyı ezme
+    if($('sambaPass').value)body.sambaPass=$('sambaPass').value;
+    if($('adminPin').value)body.adminPin=$('adminPin').value;
+    if($('iyzicoSecret').value)body.iyzicoSecret=$('iyzicoSecret').value;
+    var langs=[]; [].forEach.call(document.querySelectorAll('#langBoxes [data-lang]'),function(cb){ if(cb.checked)langs.push(cb.getAttribute('data-lang')); });
+    if(langs.indexOf('tr')===-1)langs.unshift('tr'); body.languages=langs.join(',');
+    collectDest(); body.destinations=JSON.stringify(destList);
+    body.hiddenProducts=JSON.stringify(Object.keys(hiddenSet)); body.extraProducts=JSON.stringify(extraProducts);
+    body.featuredProducts=JSON.stringify(Object.keys(featSet)); body.upsellProducts=JSON.stringify(Object.keys(upSet));
+    body.sliderImages=JSON.stringify(sliderImages); collectPay(); body.payOptions=JSON.stringify(payList);
+    var chain=api('/api/admin/settings',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    if(logoData){chain=chain.then(function(){return api('/api/admin/logo',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({data:logoData})});}).then(function(){logoData=null;});}
+    return chain.then(function(){ if(!silent){err('');load();$('sambaPass').value='';$('adminPin').value='';$('iyzicoSecret').value='';var b=$('saveBtn');b.textContent='Kaydedildi ✓';setTimeout(function(){b.textContent='Kaydet';},1500);} });
+  }
+  $('saveBtn').onclick=function(){save(false).catch(function(e){err(e.message);});};
+  $('menuBtn').onclick=function(){
+    $('menuPrev').textContent='Menü çekiliyor…';
+    save(true).then(function(){return api('/api/admin/menu-preview');}).then(function(r){
+      var parts=(r.menus||[]).map(function(m){ return m.error?('<span class="bad">'+esc(m.menu)+': '+esc(m.error)+'</span>'):('<span class="ok">✓ '+esc(m.menu)+': '+m.categories+' kategori, '+m.items+' ürün</span>'); });
+      $('menuPrev').innerHTML=parts.join('<br>')||'menü bulunamadı';
+    }).catch(function(e){$('menuPrev').innerHTML='<span class="bad">'+esc(e.message)+'</span>';});
+  };
+  function needSamba(){ if(!$('sambaUser').value.trim()||( !$('sambaPass').value && !/kayıtlı/.test($('sambaPass').placeholder))){ $('testRes').innerHTML='<span class="bad">Önce SambaPOS yönetici <b>kullanıcı adı + şifresini</b> girin (bu kartta), sonra tekrar deneyin.</span>'; return true;} return false; }
+  $('pullBtn').onclick=function(){
+    if(needSamba())return;
+    $('testRes').textContent='Listeler çekiliyor…';
+    var map={menus:'menus',departments:'department',ticketTypes:'ticketType',terminals:'terminal',entityTypes:'entityType',automationCommands:'printCommand'};
+    save(true).then(function(){return api('/api/admin/options');}).then(function(o){
+      var filled=[];
+      Object.keys(map).forEach(function(key){
+        var list=o[key]||[]; if(!list.length)return;
+        var dlId='dl_'+map[key]; var dl=document.getElementById(dlId);
+        if(!dl){dl=document.createElement('datalist');dl.id=dlId;document.body.appendChild(dl);}
+        dl.innerHTML=list.map(function(v){return '<option value="'+esc(v)+'"></option>';}).join('');
+        var inp=$(map[key]); if(inp)inp.setAttribute('list',dlId); filled.push(map[key]+' ('+list.length+')');
+      });
+      if(o.paymentTypes&&o.paymentTypes.length){ fillDL('dl_paymentType',o.paymentTypes); filled.push('ödeme tipleri ('+o.paymentTypes.length+')'); }
+      if(o.entityScreens&&o.entityScreens.length){ fillDL('dl_entityScreen',o.entityScreens); filled.push('varlık ekranları ('+o.entityScreens.length+')'); }
+      $('testRes').innerHTML=(!filled.length)?('<span class="bad">'+esc(o.error||'Liste alınamadı — SambaPOS kullanıcısı yönetici mi?')+'</span>'):('<span class="ok">✓ Geldi: '+filled.join(', ')+' — kutulara tıklayıp seçin</span>');
+    }).catch(function(e){$('testRes').innerHTML='<span class="bad">'+esc(e.message)+'</span>';});
+  };
+  $('fiscalBtn').onclick=function(){
+    $('fiscalRes').textContent='…';
+    save(true).then(function(){return api('/api/admin/fiscal-test');}).then(function(r){
+      $('fiscalRes').innerHTML=r.ok?'<span class="ok">✓ '+esc(r.info||'Ayarlar tam')+'</span>':'<span class="bad">'+esc(r.error||'Hata')+'</span>';
+    }).catch(function(e){$('fiscalRes').innerHTML='<span class="bad">'+esc(e.message)+'</span>';});
+  };
+  $('openKiosk').onclick=function(){window.open('/','_blank');};
+  // ---- kioskta ödeme testleri ----
+  function payTest(m,out){ $(out).textContent='…'; save(true).then(function(){ return api('/api/admin/pay-test?m='+m); }).then(function(r){ $(out).innerHTML=r.ok?'<span class="ok">✓ '+esc(r.info||'Tamam')+'</span>':'<span class="bad">✗ '+esc(r.error||'Hata')+'</span>'; }).catch(function(e){ $(out).innerHTML='<span class="bad">'+esc(e.message)+'</span>'; }); }
+  $('iyzTest').onclick=function(){ payTest('qr','iyzRes'); };
+  $('posTest').onclick=function(){ payTest('terminal','posRes'); };
+  // SambaPOS listelerini (ödeme tipi, varlık tipi/ekranı) girişte arka planda doldur - kutulardan seçilsin.
+  function autoOptions(){ api('/api/admin/options').then(function(o){ if(o.paymentTypes) fillDL('dl_paymentType',o.paymentTypes); if(o.entityScreens) fillDL('dl_entityScreen',o.entityScreens); if(o.entityTypes) fillDL('dl_entityType',o.entityTypes); }).catch(function(){}); }
+  // ---- kiosk fiş yazıcısı ----
+  var prnLoaded=false;
+  function loadPrinters(cur){
+    return api('/api/admin/printers').then(function(r){ prnLoaded=true; var sel=$('kioskPrinter'), list=r.printers||[]; cur=cur!=null?cur:(sel.value||r.current||'');
+      if(cur&&list.indexOf(cur)<0) list=[cur].concat(list);
+      sel.innerHTML='<option value="">— Kapalı (fiş basma) —</option>'+list.map(function(p){return '<option'+(p===cur?' selected':'')+'>'+esc(p)+'</option>';}).join('');
+      sel.value=cur||''; return list.length; }).catch(function(e){ $('prnRes').innerHTML='<span class="bad">'+esc(e.message)+'</span>'; });
+  }
+  $('prnRefresh').onclick=function(){ $('prnRes').textContent='…'; loadPrinters().then(function(n){ $('prnRes').innerHTML='<span class="ok">'+(n||0)+' yazıcı bulundu</span>'; }); };
+  $('prnTest').onclick=function(){ if(!$('kioskPrinter').value){ $('prnRes').innerHTML='<span class="bad">Önce bir yazıcı seçin.</span>'; return; } $('prnRes').textContent='yazdırılıyor…';
+    save(true).then(function(){ return api('/api/admin/printer-test'); }).then(function(r){ $('prnRes').innerHTML=r.ok?'<span class="ok">✓ '+esc(r.info||'Gönderildi')+'</span>':'<span class="bad">✗ '+esc(r.error||'Hata')+'</span>'; }).catch(function(e){ $('prnRes').innerHTML='<span class="bad">'+esc(e.message)+'</span>'; }); };
+  function sambaMissing(){ return !$('sambaUser').value.trim() || (!$('sambaPass').value && !/kayıtlı/.test($('sambaPass').placeholder)); }
+  $('catPull').onclick=function(){ if(sambaMissing()){$('catStat').innerHTML='<span class="bad">Önce SambaPOS bölümünde yönetici kullanıcı adı + şifresini girin.</span>';return;} loadCatalog(); };
+  $('dataPull').onclick=function(){ if(sambaMissing()){$('dataStat').innerHTML='<span class="bad">Önce SambaPOS bölümünde yönetici kullanıcı adı + şifresini girin.</span>';return;} loadData(); };
+  $('menus').addEventListener('change',catMenuOptions);
+
+  // zaten girisli olabilir (cookie)
+  api('/api/admin/settings').then(function(){$('gate').style.display='none';$('panel').style.display='';load();buildNav();autoOptions();}).catch(function(){});
+})();
+</script>
+</body>
+</html>

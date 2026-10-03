@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<title>EnsariPOS Kiosk</title>
+<style>
+/* QR Menü kalitesinde kiosk teması: sıcak krem zemin, marka başlık, altın vurgu,
+   görselde fiyat etiketi, yumuşak gölgeler. --accent/--bg vb. admin temasıyla değişir. */
+:root{
+  --accent:#3498db; --accent2:#5faee3; --accent-d:#2c6fa0;
+  --bg:#faf6ee; --card:#ffffff; --tx:#2a1c14; --tx2:#8a7a68; --line:#ece3d4;
+  --gold:#c9a227; --gold-d:#a8841c; --ok:#1e9e5a;
+  --shadow:0 6px 18px rgba(0,0,0,.08); --shadow-l:0 16px 40px rgba(0,0,0,.14);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;font-family:system-ui,'Segoe UI',Roboto,Arial,sans-serif}
+html{height:100%;background:var(--bg)}
+body{height:100%;overflow:hidden;color:var(--tx);user-select:none;background:var(--bg);background:radial-gradient(ellipse at top,color-mix(in srgb,var(--accent) 13%,var(--bg)) 0%,var(--bg) 60%)}
+img{display:block}
+.screen{position:fixed;inset:0;display:none;flex-direction:column}
+.screen.on{display:flex}
+.fade{animation:fade .35s ease}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+button{font:inherit;cursor:pointer;border:0;background:none;color:inherit}
+
+/* ---------- SPLASH ---------- */
+#splash{background:linear-gradient(145deg,var(--accent),var(--accent-d));color:#fff;align-items:center;justify-content:center;text-align:center;position:fixed;inset:0}
+.splashmid{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;gap:16px;background:#fff;border-radius:34px;padding:46px 60px;box-shadow:0 30px 80px rgba(0,0,0,.32)}
+#splash .logo{max-width:300px;max-height:220px;filter:drop-shadow(0 8px 20px rgba(0,0,0,.12))}
+#splash .biz{font-size:46px;font-weight:900;letter-spacing:-.5px;color:var(--accent);background:linear-gradient(135deg,var(--accent),var(--accent-d));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+#splash .tap{position:absolute;bottom:64px;left:50%;transform:translateX(-50%);z-index:3;display:inline-flex;align-items:center;gap:12px;background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#2a1c14;font-size:26px;font-weight:800;padding:16px 38px;border-radius:999px;box-shadow:0 12px 34px rgba(201,162,39,.55);animation:pulse 1.8s ease-in-out infinite}
+#splash .hand{font-size:32px;display:inline;margin:0}
+.slider{position:absolute;inset:0;z-index:0;overflow:hidden}
+.slider img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transition:opacity 1s ease}
+.slider img.on{opacity:1}
+#splash.hasslider .splashmid{position:absolute;bottom:150px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,.92)}
+#splash.hasslider .splashmid .logo{max-height:110px}
+#splash.hasslider .tap{bottom:56px}
+#splash.hasslider:after{content:'';position:absolute;inset:0;z-index:1;background:linear-gradient(to top,rgba(0,0,0,.5),rgba(0,0,0,0) 45%)}
+@keyframes pulse{0%,100%{transform:translateX(-50%) scale(1);box-shadow:0 12px 34px rgba(201,162,39,.5)}50%{transform:translateX(-50%) scale(1.05);box-shadow:0 16px 44px rgba(201,162,39,.8)}}
+.langbar{position:fixed;top:22px;right:22px;display:flex;gap:10px;z-index:30}
+.langbar img{width:50px;height:34px;border-radius:7px;object-fit:cover;box-shadow:0 2px 8px rgba(0,0,0,.25);opacity:.55;border:3px solid transparent}
+.langbar img.on{opacity:1;border-color:#fff}
+
+/* ---------- Common header ---------- */
+.hd{display:flex;align-items:center;gap:14px;padding:16px 26px;background:linear-gradient(135deg,var(--accent),var(--accent-d));color:#fff;flex:0 0 auto;box-shadow:0 4px 18px rgba(0,0,0,.18);z-index:5}
+.hd .blogo{height:44px;max-width:150px;object-fit:contain;background:#fff;border-radius:10px;padding:3px 7px}
+.hd .bname{font-size:23px;font-weight:900;color:#fff}
+.hd .sp{flex:1}
+.back{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;color:#fff;padding:10px 18px;border-radius:999px;background:rgba(255,255,255,.2)}
+
+/* ---------- Order type / menu select ---------- */
+.mid{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;gap:42px}
+.mid h2{font-size:38px;font-weight:900;text-align:center;color:var(--tx)}
+.cards{display:flex;gap:38px;flex-wrap:wrap;justify-content:center}
+.otcard{width:310px;height:350px;background:var(--card);border-radius:28px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;border:2px solid var(--line);transition:transform .14s,box-shadow .14s}
+.otcard:active{transform:scale(.96)}
+.otcard:hover{box-shadow:var(--shadow-l);border-color:var(--gold)}
+.otcard img{width:140px;height:140px;object-fit:contain}
+.otcard .emoji{font-size:120px;line-height:1}
+.otcard .lbl{font-size:32px;font-weight:800;color:var(--tx)}
+
+/* ---------- Menu ---------- */
+/* Kategoriler ÜSTTE, SambaPOS'taki gibi renkli butonlar (renk SambaPOS menüsünden gelir) */
+.mbody{flex:1;display:flex;flex-direction:column;min-height:0}
+.cats{flex:0 0 auto;display:flex;gap:12px;overflow-x:auto;overflow-y:hidden;padding:14px 20px;background:var(--card);border-bottom:1px solid var(--line);box-shadow:0 4px 14px rgba(0,0,0,.05);scrollbar-width:none;z-index:2}
+.cats::-webkit-scrollbar{display:none}
+.cat{flex:0 0 auto;min-width:136px;height:96px;padding:10px 16px;border-radius:18px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:#f6efe2;color:var(--tx);font-size:16.5px;font-weight:800;text-align:center;border:3px solid transparent;box-shadow:0 2px 8px rgba(0,0,0,.07);transition:transform .14s,box-shadow .14s}
+.cat .ci{font-size:32px;line-height:1}
+.cat .cn{max-width:160px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cat.colored .ci{filter:drop-shadow(0 1px 2px rgba(0,0,0,.25))}
+.cat.on{border-color:var(--gold);transform:translateY(-2px);box-shadow:0 10px 22px rgba(0,0,0,.18)}
+.cat:not(.colored).on{background:linear-gradient(135deg,var(--accent),var(--accent-d));color:#fff}
+.cat.feat{background:linear-gradient(135deg,#f7dc7a,var(--gold));color:#2a1c14}
+.prods{flex:1;overflow-y:auto;padding:22px;display:grid;grid-template-columns:repeat(auto-fill,minmax(236px,1fr));gap:20px;align-content:start}
+.pcard{background:var(--card);border-radius:18px;box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;border:1px solid var(--line);transition:transform .14s,box-shadow .14s}
+.pcard:active{transform:scale(.97)}
+.pcard:hover{box-shadow:var(--shadow-l)}
+.pimgwrap{position:relative;width:100%;height:160px;background:linear-gradient(135deg,#f6ecd9,#ecdcb8)}
+.pimgwrap .pimg{width:100%;height:100%;object-fit:cover}
+.pph{width:100%;height:100%;display:grid;place-items:center;font-size:68px;background:radial-gradient(circle at 50% 40%,#fff7e8 0%,#f3e3c3 70%,#ead6ad 100%)}
+.ptag{position:absolute;left:0;bottom:0;background:linear-gradient(135deg,var(--accent),var(--accent-d));color:#fff;font-weight:900;font-size:17px;padding:7px 15px;border-top-right-radius:14px;box-shadow:0 -2px 10px rgba(0,0,0,.18);letter-spacing:.2px}
+.padd{position:absolute;right:10px;bottom:10px;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#2a1c14;font-size:30px;font-weight:800;display:grid;place-items:center;box-shadow:0 5px 16px rgba(201,162,39,.55)}
+.pb{padding:13px 15px 16px;display:flex;flex-direction:column;gap:4px;flex:1}
+.pn{font-size:18px;font-weight:800;line-height:1.25;color:var(--tx)}
+.pd{font-size:13.5px;color:var(--tx2);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.empty{grid-column:1/-1;text-align:center;color:var(--tx2);font-size:22px;padding:80px 20px}
+
+/* ---------- Cart bar ---------- */
+.cartbar{flex:0 0 auto;display:flex;align-items:center;gap:18px;padding:15px 26px;background:var(--card);border-top:1px solid var(--line);box-shadow:0 -8px 24px rgba(0,0,0,.07)}
+.cartbar .cinfo{font-size:16px;font-weight:700;color:var(--tx2)}
+.cartbar .ctot{font-size:30px;font-weight:900;color:var(--tx)}
+.cartbar .sp{flex:1}
+.bigbtn{background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#2a1c14;font-size:23px;font-weight:800;padding:17px 40px;border-radius:999px;box-shadow:0 10px 26px rgba(201,162,39,.45)}
+.bigbtn:active{transform:scale(.97)}
+.bigbtn.ghost{background:var(--card);color:var(--tx);box-shadow:none;border:2px solid var(--line)}
+.bigbtn[disabled]{opacity:.4;box-shadow:none}
+
+/* ---------- Modal (product detail / cart / keypad) ---------- */
+.ov{position:fixed;inset:0;background:rgba(42,28,20,.55);display:none;align-items:flex-end;justify-content:center;z-index:40}
+.ov.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:760px;max-height:92vh;border-radius:30px 30px 0 0;overflow:auto;animation:up .3s ease}
+@keyframes up{from{transform:translateY(100%)}to{transform:none}}
+.sheet.center{border-radius:28px;margin:auto}
+#pd .pdimg{width:100%;height:300px;object-fit:cover;background:linear-gradient(135deg,#f6ecd9,#ecdcb8)}
+.pdbody{padding:24px 26px 26px}
+#pd .pdn{font-size:30px;font-weight:900;color:var(--tx)}
+#pd .pdd{font-size:18px;color:var(--tx2);margin-top:10px;line-height:1.5}
+#pd .pdp{font-size:32px;font-weight:900;color:var(--gold-d);margin-top:14px}
+.allerg{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.allerg img{width:46px;height:46px}
+.qtyrow{display:flex;align-items:center;gap:22px;margin:24px 0}
+.qbtn{width:60px;height:60px;border-radius:16px;background:#f6efe2;color:var(--tx);font-size:36px;font-weight:700;display:grid;place-items:center}
+.qval{font-size:34px;font-weight:900;min-width:50px;text-align:center}
+#cart .clist{padding:10px 24px}
+.cr{display:flex;align-items:center;gap:14px;padding:16px 0;border-bottom:1px solid var(--line)}
+.cr .crn{flex:1;font-size:20px;font-weight:700;color:var(--tx)}
+.cr .crp{font-size:19px;font-weight:800;min-width:90px;text-align:right;color:var(--gold-d)}
+.cr .q{display:flex;align-items:center;gap:12px}
+.cr .q button{width:42px;height:42px;border-radius:12px;background:#f6efe2;font-size:26px;font-weight:700}
+.cr .q span{font-size:22px;font-weight:800;min-width:30px;text-align:center}
+.sumrow{display:flex;justify-content:space-between;align-items:center;padding:20px 26px;font-size:28px;font-weight:900;border-top:2px solid var(--line);color:var(--tx)}
+.sheethd{display:flex;align-items:center;justify-content:space-between;padding:22px 24px 6px}
+.sheethd h3{font-size:26px;font-weight:900;color:var(--tx)}
+.closex{font-size:32px;color:var(--tx2);width:48px;height:48px;border-radius:50%;background:#f6efe2;display:grid;place-items:center}
+.sheetfoot{padding:18px 24px 26px;display:flex;gap:14px}
+.sheetfoot .bigbtn{flex:1;text-align:center}
+#kp .kphead{text-align:center;padding:26px 20px 6px;font-size:26px;font-weight:900;color:var(--tx)}
+#kp .kpval{text-align:center;font-size:56px;font-weight:900;color:var(--accent);min-height:70px;letter-spacing:4px}
+.kpgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;padding:16px 26px}
+.kpgrid button{height:76px;border-radius:18px;background:#f6efe2;font-size:34px;font-weight:800;color:var(--tx)}
+.kpgrid button:active{background:var(--line)}
+.tpgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px;padding:16px 24px 26px;max-height:72vh;overflow:auto}
+.tpbtn{padding:22px 10px;border-radius:16px;background:#f6efe2;font-size:21px;font-weight:800;color:var(--tx);border:2px solid var(--line);transition:transform .12s}
+.tpbtn:active{transform:scale(.95);background:var(--accent);color:#fff;border-color:var(--accent)}
+#pay .paycards{display:flex;gap:30px;flex-wrap:wrap;justify-content:center}
+.paycard{width:258px;height:280px;background:var(--card);border-radius:26px;box-shadow:var(--shadow);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;border:2px solid var(--line);transition:transform .14s,box-shadow .14s}
+.paycard:active{transform:scale(.96)}
+.paycard:hover{box-shadow:var(--shadow-l);border-color:var(--gold)}
+.paycard img{width:104px;height:104px;object-fit:contain}
+.paycard .emoji{font-size:92px}
+.paycard .lbl{font-size:25px;font-weight:800;text-align:center;color:var(--tx)}
+
+/* ---------- Processing / success ---------- */
+#done{align-items:center;justify-content:center;text-align:center}
+#done .lot{width:300px;height:300px}
+#done .dtitle{font-size:44px;font-weight:900;margin-top:10px;color:var(--tx)}
+#done .dsub{font-size:24px;color:var(--tx2);margin-top:14px}
+#done .ono{margin-top:26px;font-size:24px;font-weight:700;color:var(--tx2);background:var(--card);padding:18px 44px;border-radius:22px;box-shadow:var(--shadow);border:1px solid var(--line)}
+#done .ono b{font-size:52px;color:var(--gold-d);display:block;margin-top:4px}
+
+.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:#2a1c14;color:#fff;padding:16px 28px;border-radius:999px;font-size:20px;font-weight:700;opacity:0;transition:opacity .25s;z-index:60;pointer-events:none}
+.toast.on{opacity:.96}
+/* ---------- arama, klavye, seçenekler, öneri, kolay mod ---------- */
+.hbtn{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:800;color:#fff;padding:10px 20px;border-radius:999px;background:rgba(255,255,255,.2);margin-right:10px}
+.sbar{display:none;align-items:center;gap:12px;padding:12px 22px;background:#fff8e6;border-bottom:1px solid var(--line);font-size:18px;font-weight:700;color:var(--tx);flex:0 0 auto}
+.sbar .sp{flex:1}.sbar .sc{color:var(--tx2);font-size:15px}
+.sbar button{background:var(--card);border:2px solid var(--line);border-radius:999px;padding:8px 16px;font-weight:800;color:var(--tx)}
+.kb{position:fixed;left:0;right:0;bottom:0;z-index:70;background:#2a1c14;padding:12px 14px 16px;transform:translateY(105%);transition:transform .25s ease;box-shadow:0 -10px 30px rgba(0,0,0,.3)}
+.kb.on{transform:none}
+.kbbar{display:flex;gap:10px;margin-bottom:6px}
+.kbin{flex:1;background:#fff;border-radius:14px;padding:14px 18px;font-size:24px;font-weight:700;color:var(--tx);min-height:58px}
+.kbin.empty:before{content:attr(data-ph);color:#b3a48f}
+.kbdone{background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#2a1c14;font-weight:900;font-size:20px;padding:0 30px;border-radius:14px}
+.kbrow{display:flex;gap:8px;justify-content:center;margin-top:8px}
+.kbrow button{flex:1;max-width:84px;height:62px;border-radius:12px;background:#4a3a2e;color:#fff;font-size:24px;font-weight:800}
+.kbrow button:active{background:var(--gold);color:#2a1c14}
+.kbrow .w2{max-width:170px;flex:2}.kbrow .w6{max-width:540px;flex:6}
+.pdimgw{width:100%;height:300px;background:linear-gradient(135deg,#f6ecd9,#ecdcb8)}
+.pph.big{font-size:130px}
+.optg{margin-top:20px}
+.optt{font-size:18px;font-weight:900;color:var(--tx);margin-bottom:10px}
+.optt .req{font-size:12.5px;background:#fde2e1;color:#b42318;border-radius:999px;padding:3px 10px;margin-left:6px;font-weight:800}
+.optt .optmax{font-size:13px;color:var(--tx2);font-weight:700;margin-left:6px}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{padding:13px 20px;border-radius:999px;background:#f6efe2;border:2px solid var(--line);font-size:17px;font-weight:800;color:var(--tx)}
+.chip b{color:var(--gold-d);font-weight:900}
+.chip.on{background:linear-gradient(135deg,var(--accent),var(--accent-d));border-color:transparent;color:#fff}
+.chip.on b{color:#ffe9a8}
+.notes{margin-top:22px}
+.notebtn{margin-top:12px;padding:14px 20px;border-radius:14px;border:2px dashed var(--line);background:#fffaf0;font-size:17px;font-weight:700;color:var(--tx2);width:100%;text-align:left}
+.crsub{font-size:14px;color:var(--tx2);font-weight:600;margin-top:4px}
+#cInfo{cursor:pointer}
+.cartbar.bump{animation:bump .45s ease}
+@keyframes bump{0%{transform:none}30%{transform:translateY(-6px)}60%{transform:translateY(2px)}100%{transform:none}}
+.pcard.feat{border:2px solid var(--gold)}
+.fbadge{position:absolute;top:10px;left:10px;background:linear-gradient(135deg,#f7dc7a,var(--gold));color:#2a1c14;font-size:13px;font-weight:900;padding:5px 11px;border-radius:999px;box-shadow:0 3px 10px rgba(0,0,0,.18)}
+.upgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;padding:10px 24px 6px}
+.upc{position:relative;background:var(--card);border:2px solid var(--line);border-radius:18px;overflow:hidden;text-align:center;padding-bottom:14px}
+.upc.on{border-color:var(--ok)}
+.upimg{height:110px;display:grid;place-items:center;font-size:56px;background:radial-gradient(circle at 50% 40%,#fff7e8 0%,#f3e3c3 70%,#ead6ad 100%)}
+.upimg img{width:100%;height:100%;object-fit:cover}
+.upn{font-size:17px;font-weight:800;color:var(--tx);margin-top:10px;padding:0 8px}
+.upp{font-size:16px;font-weight:900;color:var(--gold-d);margin-top:4px}
+.upadd{position:absolute;top:10px;right:10px;width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold-d));color:#2a1c14;font-size:26px;font-weight:900;display:grid;place-items:center}
+.upc.on .upadd{background:var(--ok);color:#fff}
+/* ödeme (QR / kart terminali) */
+.pobody{padding:6px 28px 4px;text-align:center}
+.poamt{display:flex;align-items:baseline;justify-content:center;gap:14px;font-size:20px;color:var(--tx2);font-weight:700}
+.poamt b{font-size:44px;color:var(--tx);font-weight:900}
+.poqr{display:flex;justify-content:center;margin:18px auto 6px;padding:16px;background:#fff;border-radius:20px;border:2px solid var(--line);width:max-content;max-width:100%}
+.poqr img,.poqr canvas{display:block}
+.pocard{font-size:120px;margin:16px 0 4px;animation:tap 1.6s ease-in-out infinite}
+@keyframes tap{0%,100%{transform:translateY(0)}50%{transform:translateY(-14px)}}
+.pomsg{font-size:21px;font-weight:700;color:var(--tx);margin-top:10px;line-height:1.4}
+.pomsg .bad{color:#b42318}
+.potimer{font-size:16px;color:var(--tx2);margin-top:8px;font-weight:700}
+/* kolay mod: daha büyük ve sade */
+body.easy .prods{grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:24px}
+body.easy .pimgwrap{height:200px}
+body.easy .pn{font-size:22px}
+body.easy .ptag{font-size:21px;padding:9px 18px}
+body.easy .padd{width:62px;height:62px;font-size:40px}
+body.easy .cat{min-width:160px;height:108px;font-size:18px}
+body.easy .bigbtn{font-size:26px;padding:20px 46px}
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div class="screen on" id="splash">
+  <div class="slider" id="splashSlider"></div>
+  <div class="langbar" id="langbar"></div>
+  <div class="splashmid" id="splashMid">
+    <img class="logo" id="splashLogo" style="display:none">
+    <div class="biz" id="splashName">EnsariPOS</div>
+  </div>
+  <div class="tap" id="tapHint"><span class="hand">👆</span><span data-t="tapStart">Sipariş için dokunun</span></div>
+</div>
+
+<!-- MENU SELECT -->
+<div class="screen" id="mselect">
+  <div class="hd"><img class="blogo" id="ms_logo" style="display:none"><div class="bname" id="ms_name"></div></div>
+  <div class="mid"><h2 data-t="chooseMenu">Menü seçin</h2><div class="cards" id="menuCards"></div></div>
+</div>
+
+<!-- ORDER TYPE -->
+<div class="screen" id="otype">
+  <div class="hd"><img class="blogo" id="ot_logo" style="display:none"><div class="bname" id="ot_name"></div></div>
+  <div class="mid"><h2 data-t="howEat">Nasıl sipariş vermek istersiniz?</h2><div class="cards" id="otCards"></div></div>
+</div>
+
+<!-- MENU -->
+<div class="screen" id="menu">
+  <div class="hd">
+    <img class="blogo" id="m_logo" style="display:none"><div class="bname" id="m_name"></div>
+    <div class="sp"></div>
+    <button class="hbtn" id="m_search">🔍 <span data-t="search">Ara</span></button>
+    <button class="back" id="m_back">✕ <span data-t="cancel">İptal</span></button>
+  </div>
+  <div class="sbar" id="sbar"></div>
+  <div class="mbody">
+    <div class="cats" id="cats"></div>
+    <div class="prods" id="prods"></div>
+  </div>
+  <div class="cartbar">
+    <div id="cInfo"><div class="cinfo">🛒 <span id="cCount">0</span> <span data-t="items">ürün</span></div><div class="ctot" id="cTotal">0 ₺</div></div>
+    <div class="sp"></div>
+    <button class="bigbtn" id="goCart" disabled><span id="goCartLbl">Sepeti gör</span> →</button>
+  </div>
+</div>
+
+<!-- PAY TYPE -->
+<div class="screen" id="pay">
+  <div class="hd"><button class="back" id="pay_back">← <span data-t="back">Geri</span></button></div>
+  <div class="mid"><h2 data-t="howPay">Nasıl ödemek istersiniz?</h2><div class="paycards" id="payCards"></div></div>
+</div>
+
+<!-- DONE -->
+<div class="screen" id="done">
+  <div class="lot" id="doneLot"></div>
+  <div class="dtitle" id="doneTitle"></div>
+  <div class="dsub" id="doneSub"></div>
+  <div class="ono" id="doneOno" style="display:none"></div>
+</div>
+
+<!-- PRODUCT DETAIL -->
+<div class="ov" id="pd"><div class="sheet">
+  <div class="pdimgw" id="pd_imgw"></div>
+  <div class="pdbody">
+    <div class="pdn" id="pd_name"></div>
+    <div class="pdd" id="pd_desc"></div>
+    <div class="pdp" id="pd_price"></div>
+    <div class="allerg" id="pd_allerg"></div>
+    <div id="pd_opts"></div>
+    <div class="notes"><div class="optt" data-t="noteTitle">Not ekle</div><div class="chips" id="pd_nchips"></div><button class="notebtn" id="pd_notebtn">✏️ <span id="pd_notetxt">Kendi notunu yaz</span></button></div>
+    <div class="qtyrow"><button class="qbtn" id="pd_minus">−</button><span class="qval" id="pd_qty">1</span><button class="qbtn" id="pd_plus">+</button></div>
+  </div>
+  <div class="sheetfoot">
+    <button class="bigbtn ghost" id="pd_cancel" data-t="cancel">İptal</button>
+    <button class="bigbtn" id="pd_add"><span data-t="add">Sepete ekle</span> · <span id="pd_sum"></span></button>
+  </div>
+</div></div>
+
+<!-- CART -->
+<div class="ov" id="cart"><div class="sheet">
+  <div class="sheethd"><h3 data-t="yourCart">Sepetiniz</h3><button class="closex" id="cart_x">✕</button></div>
+  <div class="clist" id="cartList"></div>
+  <div class="sumrow"><span data-t="total">Toplam</span><span id="cartSum">0 ₺</span></div>
+  <div class="sheetfoot">
+    <button class="bigbtn ghost" id="cart_more" data-t="addMore">Ürün ekle</button>
+    <button class="bigbtn" id="cart_ok" data-t="checkout">Siparişi tamamla</button>
+  </div>
+</div></div>
+
+<!-- KEYPAD -->
+<div class="ov" id="kp"><div class="sheet center" style="max-width:460px">
+  <div class="kphead" data-t="tableNo">Masa numaranız</div>
+  <div class="kpval" id="kpVal"></div>
+  <div class="kpgrid" id="kpGrid"></div>
+  <div class="sheetfoot">
+    <button class="bigbtn ghost" id="kp_cancel" data-t="cancel">İptal</button>
+    <button class="bigbtn" id="kp_ok" data-t="ok">Tamam</button>
+  </div>
+</div></div>
+
+<!-- TABLE / ENTITY PICK -->
+<div class="ov" id="tp"><div class="sheet center" style="max-width:740px">
+  <div class="sheethd"><h3 data-t="pickTable">Masanızı seçin</h3><button class="closex" id="tp_x">✕</button></div>
+  <div id="tpGrid" class="tpgrid"></div>
+</div></div>
+
+<!-- UPSELL -->
+<div class="ov" id="up"><div class="sheet">
+  <div class="sheethd"><h3 data-t="upTitle">Bunları da ister misiniz?</h3><button class="closex" id="up_x">✕</button></div>
+  <div class="upgrid" id="upGrid"></div>
+  <div class="sheetfoot">
+    <button class="bigbtn ghost" id="up_no" data-t="noThanks">Hayır, teşekkürler</button>
+    <button class="bigbtn" id="up_ok" data-t="continueBtn">Devam et</button>
+  </div>
+</div></div>
+
+<!-- PAYMENT (QR / CARD TERMINAL) -->
+<div class="ov" id="po"><div class="sheet center" style="max-width:620px">
+  <div class="sheethd"><h3 id="poTitle"></h3><button class="closex" id="po_x">✕</button></div>
+  <div class="pobody">
+    <div class="poamt"><span data-t="amount">Tutar</span><b id="poAmt"></b></div>
+    <div id="poQr" class="poqr"></div>
+    <div id="poCard" class="pocard">💳</div>
+    <div class="pomsg" id="poMsg"></div>
+    <div class="potimer" id="poTimer"></div>
+  </div>
+  <div class="sheetfoot"><button class="bigbtn ghost" id="po_cancel" data-t="cancel">İptal</button></div>
+</div></div>
+
+<!-- ON-SCREEN KEYBOARD -->
+<div class="kb" id="kb">
+  <div class="kbbar"><div class="kbin empty" id="kbIn"></div><button class="kbdone" id="kbDone" data-t="ok">Tamam</button></div>
+  <div id="kbKeys"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lottie-web/5.12.2/lottie.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+(function(){
+  var $=function(id){return document.getElementById(id);};
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  var PH='/assets/images/place_holder.png';
+
+  var I18N={
+    tr:{tapStart:'Sipariş için dokunun',chooseMenu:'Menü seçin',howEat:'Nasıl sipariş vermek istersiniz?',cancel:'İptal',items:'ürün',viewCart:'Sepeti gör',add:'Sepete ekle',yourCart:'Sepetiniz',total:'Toplam',addMore:'Ürün ekle',checkout:'Siparişi tamamla',tableNo:'Masa numaranız',pickTable:'Masanızı seçin',ok:'Tamam',back:'Geri',howPay:'Nasıl ödemek istersiniz?',payCounter:'Kasada Öde',payCash:'Nakit',payCard:'Kredi Kartı',empty:'Bu kategoride ürün yok',sending:'Siparişiniz gönderiliyor…',thanks:'Teşekkürler!',received:'Siparişiniz alındı',orderNo:'Sipariş No',payAtCounter:'Lütfen ödemeyi kasada yapınız',added:'eklendi'},
+    en:{tapStart:'Touch to order',chooseMenu:'Choose a menu',howEat:'How would you like to order?',cancel:'Cancel',items:'items',viewCart:'View cart',add:'Add to cart',yourCart:'Your cart',total:'Total',addMore:'Add items',checkout:'Place order',tableNo:'Your table number',pickTable:'Select your table',ok:'OK',back:'Back',howPay:'How would you like to pay?',payCounter:'Pay at counter',payCash:'Cash',payCard:'Credit card',empty:'No products in this category',sending:'Sending your order…',thanks:'Thank you!',received:'Your order is received',orderNo:'Order No',payAtCounter:'Please pay at the counter',added:'added'},
+    ar:{tapStart:'المس للطلب',chooseMenu:'اختر القائمة',howEat:'كيف تريد أن تطلب؟',cancel:'إلغاء',items:'منتجات',viewCart:'عرض السلة',add:'أضف إلى السلة',yourCart:'سلتك',total:'المجموع',addMore:'أضف منتجات',checkout:'إتمام الطلب',tableNo:'رقم طاولتك',pickTable:'اختر طاولتك',ok:'موافق',back:'رجوع',howPay:'كيف تريد الدفع؟',payCounter:'ادفع عند الكاونتر',payCash:'نقداً',payCard:'بطاقة ائتمان',empty:'لا توجد منتجات',sending:'جاري إرسال طلبك…',thanks:'شكراً!',received:'تم استلام طلبك',orderNo:'رقم الطلب',payAtCounter:'يرجى الدفع عند الكاونتر',added:'أضيف'},
+    de:{tapStart:'Zum Bestellen tippen',chooseMenu:'Menü wählen',howEat:'Wie möchten Sie bestellen?',cancel:'Abbrechen',items:'Artikel',viewCart:'Warenkorb',add:'Hinzufügen',yourCart:'Ihr Warenkorb',total:'Gesamt',addMore:'Mehr',checkout:'Bestellen',tableNo:'Tischnummer',pickTable:'Wählen Sie Ihren Tisch',ok:'OK',back:'Zurück',howPay:'Wie möchten Sie zahlen?',payCounter:'An der Kasse',payCash:'Bar',payCard:'Karte',empty:'Keine Produkte',sending:'Bestellung wird gesendet…',thanks:'Danke!',received:'Bestellung erhalten',orderNo:'Bestell-Nr',payAtCounter:'Bitte an der Kasse zahlen',added:'hinzugefügt'},
+    ru:{tapStart:'Нажмите для заказа',chooseMenu:'Выберите меню',howEat:'Как вы хотите заказать?',cancel:'Отмена',items:'товаров',viewCart:'Корзина',add:'В корзину',yourCart:'Ваша корзина',total:'Итого',addMore:'Добавить',checkout:'Оформить',tableNo:'Номер стола',pickTable:'Выберите стол',ok:'ОК',back:'Назад',howPay:'Способ оплаты?',payCounter:'Оплата на кассе',payCash:'Наличные',payCard:'Карта',empty:'Нет товаров',sending:'Отправка заказа…',thanks:'Спасибо!',received:'Заказ принят',orderNo:'Заказ №',payAtCounter:'Оплатите на кассе',added:'добавлено'},
+    fr:{tapStart:'Touchez pour commander',chooseMenu:'Choisir un menu',howEat:'Comment commander ?',cancel:'Annuler',items:'articles',viewCart:'Panier',add:'Ajouter',yourCart:'Votre panier',total:'Total',addMore:'Ajouter',checkout:'Commander',tableNo:'Numéro de table',pickTable:'Choisissez votre table',ok:'OK',back:'Retour',howPay:'Comment payer ?',payCounter:'À la caisse',payCash:'Espèces',payCard:'Carte',empty:'Aucun produit',sending:'Envoi…',thanks:'Merci !',received:'Commande reçue',orderNo:'N° commande',payAtCounter:'Veuillez payer à la caisse',added:'ajouté'}
+  };
+  var FLAG={tr:'tr',en:'us',ar:'ar',de:'de',ru:'ru',fr:'fr'};
+  var I18N_X={
+    tr:{featured:'Öne Çıkanlar',search:'Ara',searchPh:'Ürün ara…',closeSearch:'Kapat',noResult:'Sonuç bulunamadı',required:'zorunlu',upTo:'en fazla',choose:'Lütfen seçin',noteTitle:'Not ekle',writeNote:'Kendi notunu yaz',upTitle:'Bunları da ister misiniz?',noThanks:'Hayır, teşekkürler',continueBtn:'Devam et',orderNow:'Siparişi ver',takeReceipt:'Fişinizi alınız',payQr:'QR ile Kartla Öde',payTerminal:'Kartla Öde',scanQr:'Telefonunuzun kamerasıyla QR kodu okutun ve ödemeyi tamamlayın',tapCard:'Kartınızı POS cihazına okutun veya yaklaştırın',preparing:'Ödeme hazırlanıyor…',payExpired:'Süre doldu, lütfen tekrar deneyin',payFailed:'Ödeme tamamlanamadı',paidOk:'Ödemeniz alındı',amount:'Tutar'},
+    en:{featured:'Featured',search:'Search',searchPh:'Search products…',closeSearch:'Close',noResult:'No results',required:'required',upTo:'up to',choose:'Please choose',noteTitle:'Add a note',writeNote:'Write your own note',upTitle:'Would you like these too?',noThanks:'No, thanks',continueBtn:'Continue',orderNow:'Place order',takeReceipt:'Please take your receipt',payQr:'Pay by card (QR)',payTerminal:'Pay by card',scanQr:'Scan the QR code with your phone camera and complete the payment',tapCard:'Insert or tap your card on the POS device',preparing:'Preparing payment…',payExpired:'Time is up, please try again',payFailed:'Payment could not be completed',paidOk:'Payment received',amount:'Amount'},
+    ar:{featured:'المميزة',search:'بحث',searchPh:'ابحث عن منتج…',closeSearch:'إغلاق',noResult:'لا نتائج',required:'إلزامي',upTo:'حتى',choose:'يرجى الاختيار',noteTitle:'أضف ملاحظة',writeNote:'اكتب ملاحظتك',upTitle:'هل تريد هذه أيضاً؟',noThanks:'لا، شكراً',continueBtn:'متابعة',orderNow:'اطلب الآن',takeReceipt:'خذ إيصالك',payQr:'ادفع بالبطاقة (QR)',payTerminal:'ادفع بالبطاقة',scanQr:'امسح رمز QR بكاميرا هاتفك وأكمل الدفع',tapCard:'أدخل أو قرّب بطاقتك من جهاز الدفع',preparing:'جاري تجهيز الدفع…',payExpired:'انتهى الوقت، حاول مرة أخرى',payFailed:'تعذر إتمام الدفع',paidOk:'تم استلام الدفع',amount:'المبلغ'},
+    de:{featured:'Empfohlen',search:'Suchen',searchPh:'Produkt suchen…',closeSearch:'Schließen',noResult:'Keine Ergebnisse',required:'Pflicht',upTo:'bis zu',choose:'Bitte wählen',noteTitle:'Notiz hinzufügen',writeNote:'Eigene Notiz',upTitle:'Möchten Sie auch das?',noThanks:'Nein, danke',continueBtn:'Weiter',orderNow:'Bestellen',takeReceipt:'Bitte Beleg nehmen',payQr:'Mit Karte zahlen (QR)',payTerminal:'Mit Karte zahlen',scanQr:'Scannen Sie den QR-Code mit Ihrer Handykamera und zahlen Sie',tapCard:'Karte am Terminal einstecken oder auflegen',preparing:'Zahlung wird vorbereitet…',payExpired:'Zeit abgelaufen, bitte erneut versuchen',payFailed:'Zahlung fehlgeschlagen',paidOk:'Zahlung erhalten',amount:'Betrag'},
+    ru:{featured:'Рекомендуем',search:'Поиск',searchPh:'Найти блюдо…',closeSearch:'Закрыть',noResult:'Ничего не найдено',required:'обязательно',upTo:'до',choose:'Выберите',noteTitle:'Комментарий',writeNote:'Свой комментарий',upTitle:'Добавить ещё?',noThanks:'Нет, спасибо',continueBtn:'Далее',orderNow:'Заказать',takeReceipt:'Возьмите чек',payQr:'Оплата картой (QR)',payTerminal:'Оплата картой',scanQr:'Отсканируйте QR-код камерой телефона и оплатите',tapCard:'Вставьте или приложите карту к терминалу',preparing:'Подготовка оплаты…',payExpired:'Время истекло, попробуйте снова',payFailed:'Оплата не прошла',paidOk:'Оплата получена',amount:'Сумма'},
+    fr:{featured:'À la une',search:'Rechercher',searchPh:'Chercher un produit…',closeSearch:'Fermer',noResult:'Aucun résultat',required:'obligatoire',upTo:"jusqu'à",choose:'Veuillez choisir',noteTitle:'Ajouter une note',writeNote:'Votre note',upTitle:'Voulez-vous aussi ceci ?',noThanks:'Non, merci',continueBtn:'Continuer',orderNow:'Commander',takeReceipt:'Prenez votre ticket',payQr:'Payer par carte (QR)',payTerminal:'Payer par carte',scanQr:'Scannez le QR code avec votre téléphone et payez',tapCard:'Insérez ou approchez votre carte du terminal',preparing:'Préparation du paiement…',payExpired:'Temps écoulé, veuillez réessayer',payFailed:'Paiement échoué',paidOk:'Paiement reçu',amount:'Montant'}
+  };
+  Object.keys(I18N_X).forEach(function(l){ var d=I18N[l]||(I18N[l]={}); Object.keys(I18N_X[l]).forEach(function(k){ d[k]=I18N_X[l][k]; }); });
+  var lang='tr';
+  function T(k){var d=I18N[lang]||I18N.tr;return d[k]||I18N.tr[k]||k;}
+  function applyT(){ [].forEach.call(document.querySelectorAll('[data-t]'),function(e){e.textContent=T(e.getAttribute('data-t'));}); document.documentElement.dir = lang==='ar'?'rtl':'ltr'; }
+
+  var cfg=null, cats=[], curCat=0, cart=[], selMenu='', dest=null, langs=['tr'], idleTimer=null, easy=false;
+  function money(v){ v=parseFloat(v)||0; return (v%1?v.toFixed(2):v.toFixed(0))+' ₺'; }
+  // Kategori/ürün adına göre uygun yemek emojisi (görsel yoksa çirkin placeholder yerine kullanılır).
+  var EMAP=[[/çorba|corba|soup/,'🍲'],[/kahvalt|breakfast|serpme/,'🍳'],[/döner|doner|dürüm|durum/,'🥙'],[/lahmac|pide|pizza/,'🍕'],[/kebap|kebab|şiş|sis|ızgara|izgara|mangal/,'🍢'],[/köfte|kofte/,'🍖'],[/tavuk|chicken|kanat|wing/,'🍗'],[/balık|balik|fish|deniz/,'🐟'],[/et\b|et |steak|biftek|parça|paça|paca|kelle|işkembe|iskembe|şırdan|sirdan/,'🥩'],[/burger|hamburg/,'🍔'],[/makarna|pasta|spagetti|noodle/,'🍝'],[/salata|salad|meze/,'🥗'],[/tatl|dessert|sütlaç|sutlac|baklava|künefe|kunefe|dondurma|pasta|kek/,'🍰'],[/çay|cay|kahve|coffee|tea/,'☕'],[/içecek|icecek|drink|meşrubat|mesrubat|kola|ayran|su\b|juice|soda|smoothie/,'🥤'],[/sandviç|sandvic|tost|sandwich/,'🥪'],[/wrap|rulo/,'🌯'],[/vejetaryen|vegan|sebze|veggie/,'🥦'],[/spesyal|special|özel|ozel|şef|sef/,'⭐']];
+  function foodEmoji(name){ var s=(name||'').toLowerCase(); for(var i=0;i<EMAP.length;i++){ if(EMAP[i][0].test(s)) return EMAP[i][1]; } return '🍽️'; }
+  function show(id){ [].forEach.call(document.querySelectorAll('.screen'),function(s){s.classList.toggle('on',s.id===id);}); var el=$(id); if(el){el.classList.remove('fade');void el.offsetWidth;el.classList.add('fade');} resetIdle(); }
+  function openOv(id){ $(id).classList.add('on'); }
+  function closeOv(id){ $(id).classList.remove('on'); }
+  function toast(m){ var t=$('toast'); t.textContent=m; t.classList.add('on'); setTimeout(function(){t.classList.remove('on');},1400); }
+  function resetIdle(){ clearTimeout(idleTimer); idleTimer=setTimeout(resetAll, 90000); }
+  document.addEventListener('touchstart',resetIdle,{passive:true});
+
+  function apiMenu(){ var q='/api/menu?lang='+encodeURIComponent(lang)+(selMenu?'&menu='+encodeURIComponent(selMenu):''); return fetch(q,{credentials:'same-origin'}).then(function(r){return r.json();}); }
+
+  function buildLangbar(){ var bar=$('langbar'); if(langs.length<2){bar.innerHTML='';return;} bar.innerHTML=langs.map(function(c){return '<img data-l="'+c+'" class="'+(c===lang?'on':'')+'" src="/assets/flags/'+(FLAG[c]||'us')+'.png" alt="'+c+'">';}).join(''); }
+  $('langbar').addEventListener('click',function(e){ var i=e.target.closest('img[data-l]'); if(!i)return; setLang(i.getAttribute('data-l')); });
+  function setLang(l){ if(l===lang)return; lang=l; applyT(); buildLangbar(); updateCartBar(); apiMenu().then(function(d){ cats=prepCats(d.categories); if(curCat>=cats.length) curCat=0; renderCats(); renderProds(); updSbar(); }).catch(function(){}); }
+
+  function shade(hex,p){ hex=(hex||'').replace('#',''); if(hex.length===3)hex=hex.split('').map(function(c){return c+c;}).join(''); if(hex.length!==6)return '#'+hex; var n=parseInt(hex,16),r=(n>>16)&255,g=(n>>8)&255,b=n&255,f=function(x){return Math.max(0,Math.min(255,Math.round(x+(p/100)*255)));}; return '#'+((1<<24)+(f(r)<<16)+(f(g)<<8)+f(b)).toString(16).slice(1); }
+  function applyTheme(){ var s=document.documentElement.style; if(cfg.theme){ s.setProperty('--accent',cfg.theme); s.setProperty('--accent-d',shade(cfg.theme,-16)); s.setProperty('--accent2',shade(cfg.theme,16)); } if(cfg.themeMode==='dark'){ s.setProperty('--bg','#0f172a'); s.setProperty('--card','#1e293b'); s.setProperty('--tx','#f1f5f9'); s.setProperty('--tx2','#94a3b8'); s.setProperty('--line','#334155'); } }
+  var sliderTimer=null;
+  function buildSlider(){ clearInterval(sliderTimer); var imgs=(cfg.slider||[]).filter(Boolean),box=$('splashSlider'); if(!imgs.length){ box.innerHTML=''; $('splash').classList.remove('hasslider'); return; } box.innerHTML=imgs.map(function(src,i){return '<img src="'+esc(src)+'" class="'+(i===0?'on':'')+'">';}).join(''); $('splash').classList.add('hasslider'); if(imgs.length>1){ var i=0,el=box.children; sliderTimer=setInterval(function(){ el[i].classList.remove('on'); i=(i+1)%el.length; el[i].classList.add('on'); },4500); } }
+
+  function boot(){
+    fetch('/api/menu',{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){
+      cfg=d.config||{};
+      langs=(cfg.languages||'tr').split(',').map(function(s){return s.trim();}).filter(Boolean); if(!langs.length)langs=['tr'];
+      applyTheme();
+      easy=!!cfg.easyMode; document.body.classList.toggle('easy',easy); updateCartBar();
+      var nm=cfg.name||'EnsariPOS';
+      $('splashName').textContent=nm;
+      if(cfg.logo){ ['splashLogo','ms_logo','ot_logo','m_logo'].forEach(function(id){var im=$(id);im.src=cfg.logo;im.style.display='';}); }
+      ['ms_name','ot_name','m_name'].forEach(function(id){$(id).textContent=nm;});
+      applyT(); buildLangbar(); buildSlider(); show('splash');
+    }).catch(function(){ $('splashName').textContent='Bağlantı yok'; });
+  }
+
+  $('splash').addEventListener('click',function(e){ if(e.target.closest('.langbar'))return; startFlow(); });
+  function startFlow(){ selMenu=''; if((cfg.menus||[]).length>1){ buildMenuCards(); show('mselect'); return; } afterMenu(); }
+  function buildMenuCards(){ $('menuCards').innerHTML=(cfg.menus||[]).map(function(m){return '<button class="otcard" data-m="'+esc(m)+'"><div class="emoji">🍽️</div><div class="lbl">'+esc(m)+'</div></button>';}).join(''); }
+  $('menuCards').addEventListener('click',function(e){ var b=e.target.closest('[data-m]'); if(!b)return; selMenu=b.getAttribute('data-m'); afterMenu(); });
+
+  function afterMenu(){ var dests=cfg.destinations||[]; if(dests.length>1){ buildOtCards(dests); show('otype'); return; } dest = dests.length===1 ? {index:0,table:!!dests[0].table} : {index:0,table:false}; loadMenu(); }
+  function otIcon(d){ if(d.iconImg) return '<img src="'+esc(d.iconImg)+'">'; var l=(d.label||'').toLowerCase(); if(d.icon&&d.icon.length<=3) return '<div class="emoji">'+esc(d.icon)+'</div>'; if(/gel|paket|\bal\b|take|götür/.test(l)) return '<img src="/assets/icons/takeaway_icon.png">'; if(/masa|burada|dine|yer|içeri/.test(l)) return '<img src="/assets/icons/dinein_icon.png">'; return '<div class="emoji">🍽️</div>'; }
+  function buildOtCards(dests){ $('otCards').innerHTML=dests.map(function(d,i){return '<button class="otcard" data-i="'+i+'">'+otIcon(d)+'<div class="lbl">'+esc(d.label)+'</div></button>';}).join(''); }
+  $('otCards').addEventListener('click',function(e){ var b=e.target.closest('[data-i]'); if(!b)return; var i=+b.getAttribute('data-i'); var dests=cfg.destinations||[]; dest={index:i,table:!!(dests[i]&&dests[i].table)}; loadMenu(); });
+
+  // ---- ürün anahtarı / öne çıkanlar ----
+  function itemKey(it){ var p=+it.productId; return p>0?String(Math.round(p)):('n:'+it.name); }
+  function normTR(s){ return String(s||'').toLocaleLowerCase('tr').replace(/[çğıöşü]/g,function(c){return {'ç':'c','ğ':'g','ı':'i','ö':'o','ş':'s','ü':'u'}[c];}); }
+  function prepCats(raw){
+    var list=(raw||[]).slice(), fk=(cfg.featured||[]).map(String);
+    if(fk.length){ var seen={}, fi=[]; list.forEach(function(c){ (c.items||[]).forEach(function(it){ var k=itemKey(it); if(fk.indexOf(k)>=0&&!seen[k]){ seen[k]=1; it._cat=c.tr||c.name; fi.push(it); } }); }); if(fi.length) list.unshift({name:T('featured'),featured:true,items:fi}); }
+    return list;
+  }
+  function loadMenu(){ cart=[]; curCat=0; searching=false; searchQ=''; upShown=false; updateCartBar(); updSbar(); apiMenu().then(function(d){ cats=prepCats(d.categories); renderCats(); renderProds(); show('menu'); }).catch(function(){ toast('Menü yüklenemedi'); }); }
+  // SambaPOS renkleri: "#AARRGGBB" (ARGB), "#RRGGBB" ya da isim (Gainsboro...). Şeffaf/boş -> varsayılan stil.
+  var _cx=document.createElement('canvas').getContext('2d');
+  function sbColor(s){ s=String(s||'').trim(); if(!s) return ''; if(/^#[0-9a-f]{8}$/i.test(s)){ if(/^#00/i.test(s)) return ''; s='#'+s.substr(3); } try{ _cx.fillStyle='#010203'; _cx.fillStyle=s; var v=String(_cx.fillStyle); return (/^#[0-9a-f]{6}$/i.test(v)&&v!=='#010203')?v:''; }catch(e){ return ''; } }
+  function txtOn(hex){ var n=parseInt(hex.substr(1),16), r=n>>16&255, g=n>>8&255, b=n&255; return (0.299*r+0.587*g+0.114*b)>165?'#2a1c14':'#ffffff'; }
+  function renderCats(){
+    $('cats').innerHTML=cats.map(function(c,i){ var col=c.featured?'':sbColor(c.color), st=col?' style="background:'+col+';color:'+txtOn(col)+'"':'';
+      return '<div class="cat'+(c.featured?' feat':'')+(col?' colored':'')+(i===curCat&&!searching?' on':'')+'" data-i="'+i+'"'+st+'><span class="ci">'+(c.featured?'⭐':foodEmoji(c.tr||c.name))+'</span><span class="cn">'+esc(c.name)+'</span></div>'; }).join('');
+    var on=$('cats').querySelector('.cat.on'); if(on&&on.scrollIntoView) try{ on.scrollIntoView({block:'nearest',inline:'center'}); }catch(e){}
+  }
+  $('cats').addEventListener('click',function(e){ var c=e.target.closest('[data-i]'); if(!c)return; if(searching){ searching=false; searchQ=''; closeKb(); updSbar(); } curCat=+c.getAttribute('data-i'); renderCats(); renderProds(); $('prods').scrollTop=0; });
+  var viewItems=[];
+  function renderProds(){
+    var view=[];
+    if(searching){ var q=normTR(searchQ); cats.forEach(function(c){ if(c.featured)return; var catHit=q&&(normTR(c.name).indexOf(q)>=0||normTR(c.tr).indexOf(q)>=0);   // kategori adı eşleşirse tüm ürünleri
+        (c.items||[]).forEach(function(it){ if(!q||catHit||normTR(it.name).indexOf(q)>=0||normTR(it.tr).indexOf(q)>=0) view.push({it:it,cn:c.tr||c.name}); }); }); }
+    else { var c=cats[curCat]; ((c&&c.items)||[]).forEach(function(it){ view.push({it:it,cn:c.featured?(it._cat||''):(c.tr||c.name)}); }); }
+    viewItems=view.map(function(v){return v.it;});
+    if(!view.length){ $('prods').innerHTML='<div class="empty">'+(searching?T('noResult'):T('empty'))+'</div>'; return; }
+    var fk=(cfg.featured||[]).map(String);
+    $('prods').innerHTML=view.map(function(v,i){ var it=v.it, em=foodEmoji((it.tr||it.name)+' '+v.cn), isF=fk.indexOf(itemKey(it))>=0;
+      return '<div class="pcard'+(isF?' feat':'')+'" data-i="'+i+'">'+
+        '<div class="pimgwrap">'+(it.image?'<img class="pimg" src="'+esc(it.image)+'" onerror="this.outerHTML=\'<div class=pph>'+em+'</div>\'">':'<div class="pph">'+em+'</div>')+
+        (isF?'<div class="fbadge">⭐ '+esc(T('featured'))+'</div>':'')+'<div class="ptag">'+money(it.price)+'</div><div class="padd">+</div></div>'+
+        '<div class="pb"><div class="pn">'+esc(it.name)+'</div>'+(it.desc?'<div class="pd">'+esc(it.desc)+'</div>':'')+'</div></div>';
+    }).join('');
+  }
+  $('prods').addEventListener('click',function(e){ var p=e.target.closest('[data-i]'); if(!p)return; var it=viewItems[+p.getAttribute('data-i')]; if(!it)return; closeKb();
+    if(easy){ addToCart(it,1,[],''); bump(); toast(it.name+' '+T('added')+' ✓'); return; }   // kolay mod: dokun-ekle
+    openDetail(it); });
+  $('m_back').onclick=function(){ resetAll(); };
+
+  // ---- arama + dokunmatik klavye ----
+  var searching=false, searchQ='';
+  function updSbar(){ var b=$('sbar'); if(!searching){ b.style.display='none'; return; } b.style.display='flex'; b.innerHTML='<span class="sq">🔍 '+(searchQ?'“'+esc(searchQ)+'”':esc(T('searchPh')))+'</span><span class="sp"></span><span class="sc">'+viewItems.length+' '+esc(T('items'))+'</span><button id="sbarX">✕ '+esc(T('closeSearch'))+'</button>'; }
+  $('m_search').onclick=function(){ searching=true; searchQ=''; renderCats(); renderProds(); updSbar(); openKb('',function(v){ searchQ=v; renderProds(); updSbar(); },T('searchPh'),true); };
+  document.addEventListener('click',function(e){ if(e.target.closest&&e.target.closest('#sbarX')){ searching=false; searchQ=''; closeKb(); updSbar(); renderCats(); renderProds(); } });
+  var KB_ROWS=['1234567890','QWERTYUIOPĞÜ','ASDFGHJKLŞİ','ZXCVBNMÖÇ'], kbVal='', kbCb=null, kbLive=false;
+  $('kbKeys').innerHTML=KB_ROWS.map(function(r){ return '<div class="kbrow">'+r.split('').map(function(k){return '<button data-kk="'+k+'">'+k+'</button>';}).join('')+'</div>'; }).join('')+'<div class="kbrow"><button class="w2" data-kk="CLR">✕</button><button class="w6" data-kk=" ">&nbsp;</button><button class="w2" data-kk="BS">⌫</button></div>';
+  function openKb(init,cb,ph,live){ kbVal=init||''; kbCb=cb; kbLive=!!live; $('kbIn').setAttribute('data-ph',ph||''); kbShow(); $('kb').classList.add('on'); }
+  function kbShow(){ $('kbIn').textContent=kbVal; $('kbIn').classList.toggle('empty',!kbVal); }
+  function closeKb(){ $('kb').classList.remove('on'); }
+  $('kbKeys').addEventListener('click',function(e){ var b=e.target.closest('[data-kk]'); if(!b)return; var k=b.getAttribute('data-kk');
+    if(k==='BS') kbVal=kbVal.slice(0,-1); else if(k==='CLR') kbVal=''; else if(kbVal.length<60) kbVal+=(kbVal.length?k.toLocaleLowerCase('tr'):k);
+    kbShow(); if(kbLive&&kbCb) kbCb(kbVal); });
+  $('kbDone').onclick=function(){ closeKb(); if(kbCb) kbCb(kbVal); };
+
+  // ---- ürün detayı: SambaPOS sipariş etiketleri (seçenekler) + not ----
+  var pdItem=null, pdQty=1, pdGroups=[], pdSel={}, pdNotes=[], pdNoteText='', optCache={};
+  var NOTE_CHIPS=[{tr:'Acısız',en:'Not spicy',ar:'بدون حار',de:'Nicht scharf',ru:'Не острое',fr:'Non épicé'},{tr:'Acılı',en:'Spicy',ar:'حار',de:'Scharf',ru:'Острое',fr:'Épicé'},{tr:'Soğansız',en:'No onion',ar:'بدون بصل',de:'Ohne Zwiebel',ru:'Без лука',fr:'Sans oignon'},{tr:'Az tuzlu',en:'Less salt',ar:'ملح قليل',de:'Wenig Salz',ru:'Меньше соли',fr:'Peu salé'},{tr:'Bol soslu',en:'Extra sauce',ar:'صوص إضافي',de:'Extra Soße',ru:'Больше соуса',fr:'Sauce en plus'}];
+  function loadOpts(pid){ if(optCache[pid]) return Promise.resolve(optCache[pid]); return fetch('/api/product-options?pid='+encodeURIComponent(pid),{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){ optCache[pid]=d.groups||[]; return optCache[pid]; }).catch(function(){ return []; }); }
+  function openDetail(it){
+    pdItem=it; pdQty=1; pdGroups=[]; pdSel={}; pdNotes=[]; pdNoteText='';
+    var w=$('pd_imgw'); w.innerHTML=it.image?'<img class="pdimg" src="'+esc(it.image)+'" onerror="this.outerHTML=\'<div class=pph>'+foodEmoji(it.tr||it.name)+'</div>\'">':'<div class="pph big">'+foodEmoji((it.tr||it.name)+' '+((cats[curCat]||{}).tr||(cats[curCat]||{}).name||''))+'</div>';
+    $('pd_name').textContent=it.name; $('pd_desc').textContent=it.desc||''; $('pd_price').textContent=money(it.price);
+    $('pd_allerg').innerHTML=(it.allergens||[]).map(function(a){return '<img src="/assets/allergens/'+esc(a)+'.png" onerror="this.style.display=\'none\'">';}).join('');
+    $('pd_qty').textContent='1'; $('pd_notetxt').textContent=T('writeNote'); $('pd_opts').innerHTML=''; renderNoteChips(); updatePdSum(); openOv('pd');
+    if(+it.productId>0) loadOpts(it.productId).then(function(g){ if(pdItem!==it) return; pdGroups=g||[]; renderOpts(); });
+  }
+  function renderOpts(){ $('pd_opts').innerHTML=pdGroups.map(function(g,gi){ var max=+g.max||0, min=+g.min||0;
+      return '<div class="optg"><div class="optt">'+esc(g.name)+(min>0?' <span class="req">'+esc(T('required'))+'</span>':'')+(max>1?' <span class="optmax">'+esc(T('upTo'))+' '+max+'</span>':'')+'</div><div class="chips">'+
+        g.tags.map(function(t,ti){ var on=(pdSel[g.name]||[]).indexOf(t.name)>=0; return '<button class="chip'+(on?' on':'')+'" data-gi="'+gi+'" data-ti="'+ti+'">'+esc(t.name)+(+t.price>0?' <b>+'+money(t.price)+'</b>':'')+'</button>'; }).join('')+'</div></div>'; }).join('');
+    updatePdSum(); }
+  $('pd_opts').addEventListener('click',function(e){ var b=e.target.closest('[data-gi]'); if(!b)return; var g=pdGroups[+b.getAttribute('data-gi')], t=g.tags[+b.getAttribute('data-ti')], arr=pdSel[g.name]||(pdSel[g.name]=[]), i=arr.indexOf(t.name), max=+g.max||0;
+    if(i>=0) arr.splice(i,1); else { if(max===1) arr.length=0; else if(max>1&&arr.length>=max){ toast(T('upTo')+' '+max); return; } arr.push(t.name); }
+    renderOpts(); });
+  function renderNoteChips(){ $('pd_nchips').innerHTML=NOTE_CHIPS.map(function(c,i){ return '<button class="chip'+(pdNotes.indexOf(c.tr)>=0?' on':'')+'" data-ni="'+i+'">'+esc(c[lang]||c.tr)+'</button>'; }).join(''); }
+  $('pd_nchips').addEventListener('click',function(e){ var b=e.target.closest('[data-ni]'); if(!b)return; var v=NOTE_CHIPS[+b.getAttribute('data-ni')].tr, i=pdNotes.indexOf(v); if(i>=0)pdNotes.splice(i,1); else pdNotes.push(v); renderNoteChips(); });
+  $('pd_notebtn').onclick=function(){ openKb(pdNoteText,function(v){ pdNoteText=(v||'').trim(); $('pd_notetxt').textContent=pdNoteText||T('writeNote'); },T('writeNote'),false); };
+  function pdUnit(){ var p=parseFloat(pdItem.price)||0; pdGroups.forEach(function(g){ (pdSel[g.name]||[]).forEach(function(n){ g.tags.forEach(function(t){ if(t.name===n) p+=(+t.price||0); }); }); }); return p; }
+  function updatePdSum(){ $('pd_sum').textContent=money(pdUnit()*pdQty); }
+  $('pd_minus').onclick=function(){ if(pdQty>1){pdQty--;$('pd_qty').textContent=pdQty;updatePdSum();} };
+  $('pd_plus').onclick=function(){ pdQty++;$('pd_qty').textContent=pdQty;updatePdSum(); };
+  $('pd_cancel').onclick=function(){ closeKb(); closeOv('pd'); };
+  $('pd_add').onclick=function(){
+    for(var i=0;i<pdGroups.length;i++){ var g=pdGroups[i]; if((+g.min||0)>(pdSel[g.name]||[]).length){ toast(T('choose')+': '+g.name); return; } }
+    var tags=[]; pdGroups.forEach(function(g){ (pdSel[g.name]||[]).forEach(function(n){ var pr=0; g.tags.forEach(function(t){ if(t.name===n) pr=+t.price||0; }); tags.push({group:g.name,tag:n,price:pr}); }); });
+    var note=pdNotes.concat(pdNoteText?[pdNoteText]:[]).join(', ');
+    closeKb(); addToCart(pdItem,pdQty,tags,note); closeOv('pd'); bump(); toast(pdItem.name+' '+T('added')+' ✓'); };
+
+  // ---- sepet ----
+  function lineKey(id,tags,note){ return id+'|'+(tags||[]).map(function(t){return t.group+':'+t.tag;}).sort().join(',')+'|'+(note||''); }
+  function addToCart(it,qty,tags,note){ tags=tags||[]; note=note||''; var unit=(parseFloat(it.price)||0)+tags.reduce(function(a,t){return a+(+t.price||0);},0), k=lineKey(it.id,tags,note), ex=cart.filter(function(c){return c.key===k;})[0];
+    if(ex) ex.qty+=qty; else cart.push({key:k,id:it.id,productId:it.productId,name:it.name,price:unit,qty:qty,tags:tags,note:note}); updateCartBar(); }
+  function cartCount(){ return cart.reduce(function(a,c){return a+c.qty;},0); }
+  function cartTotal(){ return cart.reduce(function(a,c){return a+c.price*c.qty;},0); }
+  function updateCartBar(){ var n=cartCount(); $('cCount').textContent=n; $('cTotal').textContent=money(cartTotal()); $('goCart').disabled=n===0; $('goCartLbl').textContent=easy?T('orderNow'):T('viewCart'); }
+  function bump(){ var b=document.querySelector('.cartbar'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }
+  $('goCart').onclick=function(){ if(easy){ checkout(); return; } renderCart(); openOv('cart'); };   // kolay mod: direkt siparişe
+  $('cInfo').onclick=function(){ if(!cart.length) return; renderCart(); openOv('cart'); };
+  $('cart_x').onclick=function(){ closeOv('cart'); };
+  $('cart_more').onclick=function(){ closeOv('cart'); };
+  function renderCart(){ $('cartList').innerHTML=cart.map(function(c,i){ var sub=(c.tags||[]).map(function(t){return t.tag;}).concat(c.note?[c.note]:[]).join(' · ');
+      return '<div class="cr"><div class="crn">'+esc(c.name)+(sub?'<div class="crsub">'+esc(sub)+'</div>':'')+'</div><div class="q"><button data-d="-1" data-i="'+i+'">−</button><span>'+c.qty+'</span><button data-d="1" data-i="'+i+'">+</button></div><div class="crp">'+money(c.price*c.qty)+'</div></div>';}).join(''); $('cartSum').textContent=money(cartTotal()); }
+  $('cartList').addEventListener('click',function(e){ var b=e.target.closest('button[data-i]'); if(!b)return; var i=+b.getAttribute('data-i'); cart[i].qty+=(+b.getAttribute('data-d')); if(cart[i].qty<=0)cart.splice(i,1); updateCartBar(); if(!cart.length){closeOv('cart');return;} renderCart(); });
+  $('cart_ok').onclick=function(){ closeOv('cart'); checkout(); };
+
+  // ---- sepette öneri ("bunları da ister misiniz?") - kolay modda atlanır ----
+  var upShown=false, upList=[];
+  function upsellItems(){ var keys=(cfg.upsell||[]).map(String); if(!keys.length) return []; var inC={}, seen={}, out=[]; cart.forEach(function(c){ inC[itemKey(c)]=1; });
+    cats.forEach(function(c){ (c.items||[]).forEach(function(it){ var k=itemKey(it); if(keys.indexOf(k)>=0&&!inC[k]&&!seen[k]){ seen[k]=1; out.push({it:it,cn:c.featured?'':(c.tr||c.name)}); } }); }); return out.slice(0,6); }
+  function checkout(){ if(!easy&&!upShown){ upList=upsellItems(); if(upList.length){ upShown=true; renderUp(); openOv('up'); return; } } proceed(); }
+  function renderUp(){ $('upGrid').innerHTML=upList.map(function(v,i){ var it=v.it, on=cart.some(function(c){return itemKey(c)===itemKey(it);});
+      return '<div class="upc'+(on?' on':'')+'" data-ui="'+i+'"><div class="upimg">'+(it.image?'<img src="'+esc(it.image)+'">':foodEmoji((it.tr||it.name)+' '+v.cn))+'</div><div class="upn">'+esc(it.name)+'</div><div class="upp">'+money(it.price)+'</div><div class="upadd">'+(on?'✓':'+')+'</div></div>'; }).join(''); }
+  $('upGrid').addEventListener('click',function(e){ var b=e.target.closest('[data-ui]'); if(!b)return; var it=upList[+b.getAttribute('data-ui')].it; if(cart.some(function(c){return itemKey(c)===itemKey(it);})) return; addToCart(it,1,[],''); bump(); renderUp(); });
+  $('up_no').onclick=function(){ closeOv('up'); proceed(); };
+  $('up_ok').onclick=function(){ closeOv('up'); proceed(); };
+  $('up_x').onclick=function(){ closeOv('up'); };
+
+  var tableNo='';
+  function proceed(){ if(dest&&dest.table){ openTablePick(); return; } afterTable(); }
+  function openTablePick(){
+    tableNo=''; $('tpGrid').innerHTML='<div style="padding:40px;text-align:center;color:var(--tx2);font-size:18px">…</div>'; openOv('tp');
+    fetch('/api/entities?dest='+((dest&&dest.index)||0),{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(d){
+      var list=(d.entities||[]);
+      if(!list.length){ closeOv('tp'); $('kpVal').textContent=''; openOv('kp'); return; }   // masa listesi yoksa tuş takımına düş
+      $('tpGrid').innerHTML=list.map(function(n){return '<button class="tpbtn" data-n="'+esc(n)+'">'+esc(n)+'</button>';}).join('');
+    }).catch(function(){ closeOv('tp'); $('kpVal').textContent=''; openOv('kp'); });
+  }
+  $('tpGrid').addEventListener('click',function(e){ var b=e.target.closest('[data-n]'); if(!b)return; tableNo=b.getAttribute('data-n'); closeOv('tp'); afterTable(); });
+  $('tp_x').onclick=function(){ closeOv('tp'); };
+  $('kpGrid').innerHTML=['1','2','3','4','5','6','7','8','9','⌫','0','OK'].map(function(k){return '<button data-k="'+k+'">'+k+'</button>';}).join('');
+  $('kpGrid').addEventListener('click',function(e){ var b=e.target.closest('[data-k]'); if(!b)return; var k=b.getAttribute('data-k'); if(k==='⌫')tableNo=tableNo.slice(0,-1); else if(k==='OK'){doTableOk();return;} else if(tableNo.length<6)tableNo+=k; $('kpVal').textContent=tableNo; });
+  $('kp_cancel').onclick=function(){ closeOv('kp'); };
+  $('kp_ok').onclick=function(){ doTableOk(); };
+  function doTableOk(){ if(!tableNo){toast(T('tableNo'));return;} closeOv('kp'); afterTable(); }
+
+  function afterTable(){ var pm=cfg.payMode||'counter';
+    if(pm==='online'){ var ms=cfg.payOptions||[]; if(!ms.length){ sendOrder('counter'); return; } if(ms.length===1){ choosePay(ms[0].key); return; } buildPayCards(); show('pay'); return; }   // kioskta ödeme
+    if(pm==='counter'&&!easy){ buildPayCards(); show('pay'); return; }
+    sendOrder(pm==='counter'?'counter':'none'); }   // kolay mod (kasada öde): ödeme ekranı atlanır
+  function choosePay(k){ if(k==='qr'||k==='terminal') startPay(k); else sendOrder(k); }
+
+  // ---- kioskta ödeme: QR (iyzico) / kart terminali. Sipariş, ödeme SUNUCUDA doğrulanınca açılır. ----
+  var payId=null, payPoll=null, payTimerI=null, payLeft=0;
+  function cartPayload(){ return cart.map(function(c){return {productId:c.productId,id:c.id,quantity:c.qty,tags:(c.tags||[]).map(function(t){return {group:t.group,tag:t.tag};}),note:c.note||''};}); }
+  function startPay(method){
+    stopPay(false); payId=null;
+    $('poTitle').textContent=method==='qr'?T('payQr'):T('payTerminal'); $('poAmt').textContent='…'; $('poQr').innerHTML=''; $('poQr').style.display='none'; $('poCard').style.display=method==='terminal'?'':'none'; $('poMsg').textContent=T('preparing'); $('poTimer').textContent=''; openOv('po');
+    fetch('/api/pay/start',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({method:method,items:cartPayload(),dest:(dest&&dest.index)||0,table:tableNo||''})})
+      .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Hata');return j;});})
+      .then(function(j){ payId=j.id; $('poAmt').textContent=money(j.amount);
+        if(method==='qr'){ drawQr(j.url); $('poMsg').textContent=T('scanQr'); } else $('poMsg').textContent=T('tapCard');
+        payLeft=j.expiresIn||300; tickPay(); payTimerI=setInterval(tickPay,1000); payPoll=setInterval(pollPay,2000); })
+      .catch(function(e){ $('poMsg').innerHTML='<span class="bad">'+esc(e.message)+'</span>'; });
+  }
+  function drawQr(url){ var el=$('poQr'); el.innerHTML=''; el.style.display='';
+    if(window.QRCode){ try{ new QRCode(el,{text:url,width:300,height:300,correctLevel:QRCode.CorrectLevel.M}); return; }catch(e){} }
+    el.innerHTML='<div style="word-break:break-all;font-size:14px;max-width:420px">'+esc(url)+'</div>'; }
+  function tickPay(){ payLeft--; resetIdle(); if(payLeft<=0){ stopPay(true); $('poQr').style.display='none'; $('poMsg').innerHTML='<span class="bad">'+esc(T('payExpired'))+'</span>'; $('poTimer').textContent=''; return; } var m=Math.floor(payLeft/60), s=payLeft%60; $('poTimer').textContent='⏱ '+m+':'+(s<10?'0':'')+s; }
+  function stopPay(cancelServer){ if(payPoll)clearInterval(payPoll); if(payTimerI)clearInterval(payTimerI); payPoll=payTimerI=null; if(cancelServer&&payId) fetch('/api/pay/cancel?id='+encodeURIComponent(payId),{method:'POST',credentials:'same-origin'}).catch(function(){}); }
+  function pollPay(){ if(!payId) return; fetch('/api/pay/status?id='+encodeURIComponent(payId),{credentials:'same-origin'}).then(function(r){return r.json();}).then(function(s){
+      if(s.status==='paid'){ stopPay(false); closeOv('po'); showPaid(s.orderNo); }
+      else if(s.status==='paid_noorder'){ stopPay(false); closeOv('po'); showDone('⚠️',T('paidOk'),s.error); }
+      else if(s.status==='failed'||s.status==='cancelled'||s.status==='expired'){ stopPay(false); $('poQr').style.display='none'; $('poCard').style.display='none'; $('poTimer').textContent=''; $('poMsg').innerHTML='<span class="bad">'+esc(s.error||T('payFailed'))+'</span>'; }
+    }).catch(function(){}); }
+  $('po_x').onclick=$('po_cancel').onclick=function(){ stopPay(true); payId=null; closeOv('po'); };
+  function showPaid(no){ show('done'); playLot('success.json',false); $('doneTitle').textContent=T('thanks'); $('doneSub').textContent=T('paidOk')+(cfg.printer?'  •  🧾 '+T('takeReceipt'):'');
+    if(no){ $('doneOno').innerHTML=T('orderNo')+'<b>'+esc(no)+'</b>'; $('doneOno').style.display=''; } else $('doneOno').style.display='none'; setTimeout(resetAll,8000); }
+  function showDone(icon,title,sub){ show('done'); $('doneLot').innerHTML='<div style="font-size:140px">'+icon+'</div>'; $('doneTitle').textContent=title; $('doneSub').textContent=sub||''; $('doneOno').style.display='none'; setTimeout(resetAll,15000); }
+  function payIcon(o){ if(o.icon) return '<img src="'+esc(o.icon)+'">'; if(o.key==='qr') return '<div class="emoji">📱</div>'; if(o.key==='terminal') return '<img src="/assets/icons/creditcard_icon.png">'; if(o.key==='cash') return '<img src="/assets/icons/cash_icon.png">'; if(o.key==='card') return '<img src="/assets/icons/creditcard_icon.png">'; if(o.key==='wallet') return '<img src="/assets/icons/wallet.png">'; return '<div class="emoji">🧾</div>'; }
+  function payLabel(o){ if(o.key==='qr'&&o.label==='QR ile Kartla Öde')return T('payQr'); if(o.key==='terminal'&&o.label==='Kartla Öde')return T('payTerminal'); if(o.key==='counter'&&o.label==='Kasada Öde')return T('payCounter'); if(o.key==='cash'&&o.label==='Nakit')return T('payCash'); if(o.key==='card'&&o.label==='Kredi Kartı')return T('payCard'); return o.label||o.key; }
+  function buildPayCards(){ var opts=cfg.payOptions||[]; if(!opts.length)opts=[{key:'counter',label:'Kasada Öde'}]; $('payCards').innerHTML=opts.map(function(o){return '<button class="paycard" data-p="'+esc(o.key)+'">'+payIcon(o)+'<div class="lbl">'+esc(payLabel(o))+'</div></button>';}).join(''); }
+  $('pay_back').onclick=function(){ show('menu'); };
+  $('payCards').addEventListener('click',function(e){ var b=e.target.closest('[data-p]'); if(!b)return; choosePay(b.getAttribute('data-p')); });
+
+  var lot=null;
+  function playLot(file,loop){ var c=$('doneLot'); c.innerHTML=''; if(window.lottie){ try{ lot=lottie.loadAnimation({container:c,renderer:'svg',loop:!!loop,autoplay:true,path:'/assets/lotties/'+file}); return; }catch(e){} } c.innerHTML='<div style="font-size:150px">'+(file.indexOf('success')>=0?'✅':'⏳')+'</div>'; }
+  function sendOrder(payType){
+    show('done'); $('doneTitle').textContent=''; $('doneSub').textContent=T('sending'); $('doneOno').style.display='none'; playLot('processing_order.json',true);
+    var body={ items:cart.map(function(c){return {productId:c.productId,id:c.id,quantity:c.qty,tags:(c.tags||[]).map(function(t){return {group:t.group,tag:t.tag};}),note:c.note||''};}), dest:(dest&&dest.index)||0, table:tableNo||'', payType:payType };
+    fetch('/api/order',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)})
+      .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||'Hata');return j;});})
+      .then(function(j){ playLot('success.json',false); $('doneTitle').textContent=T('thanks'); $('doneSub').textContent=((cfg.payMode||'counter')==='counter'?T('payAtCounter'):T('received'))+(cfg.printer?'  •  🧾 '+T('takeReceipt'):''); if(j.orderNo){ $('doneOno').innerHTML=T('orderNo')+'<b>'+esc(j.orderNo)+'</b>'; $('doneOno').style.display=''; } setTimeout(resetAll, 8000); })
+      .catch(function(e){ $('doneLot').innerHTML='<div style="font-size:140px">⚠️</div>'; $('doneTitle').textContent='Sipariş gönderilemedi'; $('doneSub').textContent=e.message; setTimeout(resetAll, 6000); });
+  }
+
+  function resetAll(){ stopPay(false); payId=null; closeOv('po'); cart=[]; selMenu=''; dest=null; tableNo=''; searching=false; searchQ=''; upShown=false; closeKb(); updSbar(); updateCartBar(); closeOv('pd');closeOv('cart');closeOv('kp');closeOv('tp');closeOv('up'); lang=langs[0]||'tr'; applyT(); buildLangbar(); show('splash'); }
+
+  boot();
+})();
+</script>
+</body>
+</html>
